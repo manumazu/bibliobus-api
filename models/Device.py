@@ -27,3 +27,11 @@ def getUserForUuid(uuid):
     INNER JOIN biblio_user_app bua ON bu.id = bua.id_user \
     INNER JOIN biblio_app ba ON bua.id_app = ba.id WHERE ba.id_ble=%s", [uuid])
   return cursor.fetchone()
+
+def getDevicesForUser(user_id):
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT ba.*, TO_BASE64(ba.id_ble) as id_ble_encode, bu.id as user_id FROM biblio_app ba \
+    INNER JOIN biblio_user_app bua ON bua.id_app = ba.id \
+    INNER JOIN biblio_user bu ON bu.id=bua.id_user \
+    WHERE bu.id=%s", [user_id])
+  return cursor.fetchall()
