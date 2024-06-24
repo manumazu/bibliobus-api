@@ -22,8 +22,8 @@ def uuidEncode(string):
     return False    
 
 #generate generic token 
-def setToken(role, email, expires_in=600):
-    return jwt.encode({role: email, 'exp': time() + expires_in}, settings.secret_key, algorithm='HS256')
+def setToken(role, email, uuid, expires_in=600):
+    return jwt.encode({role: email+'|'+uuid, 'exp': time() + expires_in}, settings.secret_key, algorithm='HS256')
 
 #verify token
 def verifyToken(role,token):
