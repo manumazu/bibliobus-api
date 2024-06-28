@@ -6,7 +6,7 @@ from models import Book, Device, User
 import tools
 
 app = FastAPI(title="Bibliobus API",
-              description="Rest API to send data to \"Bibus\" devices")
+              description="Rest API to manage position datas from and to \"Bibus\" devices")
 
 def get_auth_user(request: Request):
     """verify that user has a valid session"""
@@ -29,22 +29,26 @@ def get_book(request: Request, book_id: Union[int, None] = None):
     return {"book": result}
 
 @app.post("/book", dependencies=[Depends(get_auth_user)])
-async def create_book(request: Request, item: Book.Book):
+def create_book(request: Request, item: Book.Book):
     """Create new book for current device"""
     user_id = int(request.cookies.get("UserId"))
     device = json.loads(request.cookies.get("Device"))
     bookDict = item.dict()
-    item = Book.saveBook(bookDict, user_id, device['id'])
-    return item
+    book = Book.newBook(bookDict, user_id, device['id'])
+    # save tags
+    Book.setTagsBook(book, user_id, device['id'], None)
+    return book
 
 @app.put("/book/{book_id}", dependencies=[Depends(get_auth_user)])
-async def update_book(request: Request, book_id: int, item: Book.Book):
+def update_book(request: Request, book_id: int, item: Book.Book):
     """Update book data"""
     user_id = int(request.cookies.get("UserId"))
     device = json.loads(request.cookies.get("Device"))
     bookDict = item.dict()
-    item = Book.updateBook(bookDict, book_id, user_id, device['id'])
-    return item    
+    book = Book.updateBook(bookDict, book_id, user_id, device['id'])
+    # save tags
+    Book.setTagsBook(book, user_id, device['id'], None)
+    return book    
 
 @app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
 def get_books_in_bookshelf(request: Request, numshelf: int | None = None):

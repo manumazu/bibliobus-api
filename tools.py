@@ -27,8 +27,18 @@ def setToken(role, email, uuid, expires_in=600):
 
 #verify token
 def verifyToken(role,token):
-    try:
-        allow = jwt.decode(token, settings.secret_key, algorithms=['HS256'])[role]
-    except:
-        return False
-    return allow
+  try:
+      allow = jwt.decode(token, settings.secret_key, algorithms=['HS256'])[role]
+  except:
+      return False
+  return allow
+
+def getLastnameFirstname(names):
+  lnfn=[]
+  for name in names:
+    namearr = name.split(' ')
+    if len(namearr)>1:
+      lnfn.append(' '.join(namearr[::-1])) #reverse names array
+    else:
+      lnfn.append(namearr[0])
+  return lnfn
