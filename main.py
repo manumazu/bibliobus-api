@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Request, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
-from typing import Union
+from typing import Union, Annotated
 import json
 from models import Book, Device, User
 import tools
 
-app = FastAPI()
+app = FastAPI(title="Bibliobus API",
+              description="Rest API to send data to \"Bibus\" devices")
 
 def get_auth_user(request: Request):
     """verify that user has a valid session"""
@@ -22,15 +23,35 @@ async def root():
 
 @app.get("/book/{book_id}", dependencies=[Depends(get_auth_user)])
 def get_book(request: Request, book_id: Union[int, None] = None):
-    """Get book for device session"""
-    user_id = session_id = request.cookies.get("UserId")
+    """Get book for device bookshelf"""
+    user_id = request.cookies.get("UserId")
     result = Book.getBook(book_id, user_id)
     return {"book": result}
+
+@app.post("/book", dependencies=[Depends(get_auth_user)])
+async def create_book(request: Request, item: Book.Book):
+    """Create new book for current device"""
+    user_id = int(request.cookies.get("UserId"))
+    device = json.loads(request.cookies.get("Device"))
+    bookDict = item.dict()
+    item = Book.saveBook(bookDict, user_id, device['id'])
+    return item
+
+@app.put("/book/{book_id}", dependencies=[Depends(get_auth_user)])
+async def update_book(request: Request, book_id: int, item: Book.Book):
+    """Update book data"""
+    user_id = int(request.cookies.get("UserId"))
+    device = json.loads(request.cookies.get("Device"))
+    bookDict = item.dict()
+    item = Book.updateBook(bookDict, book_id, user_id, device['id'])
+    return item    
 
 @app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
 def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
     device = json.loads(request.cookies.get("Device"))
     shelfs = range(1,device['nb_lines']+1)
+    if numshelf:
+        shelfs = [numshelf]
     elements = {}
     stats = {}
     statics = {}
@@ -60,7 +81,7 @@ def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
 
 @app.get("/device-discover/{uuid}")
 def get_device_infos(uuid: str):
-    """Get device infos for current arduino_name"""
+    """Get device infos for current BLE uuid"""
     uuid = tools.uuidDecode(uuid) 
     if uuid:
         device = Device.getDeviceForUuid(uuid)
