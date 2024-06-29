@@ -19,6 +19,38 @@ class Book(BaseModel):
     description: Union[str, None] = None
     width: Annotated[Union[int, None], Path(title="Book width in millimeter", ge=10)] = None
 
+def getBooksForShelf(numshelf, device):
+    ''' Get list of books order by positions '''
+    shelfs = range(1,device['nb_lines']+1)
+    if numshelf:
+        shelfs = [numshelf]
+    elements = {}
+    stats = {}
+    statics = {}
+    for shelf in shelfs:
+        books = getBooksForRow(device['id'], shelf)
+        statics[shelf] = getStaticPositions(device['id'], shelf)   
+        if books:
+            statBooks = statsBooks(device['id'], shelf)
+            statPositions = statsPositions(device['id'], shelf)
+            positionRate = 0
+            if statPositions['totpos'] != None:
+                positionRate = round((statPositions['totpos']/device['nb_cols'])*100)
+            stats[shelf] = {'nbbooks':statBooks['nbbooks'], 'positionRate':positionRate}        
+            element = {}
+            for row in books:     
+                element[row['led_column']] = {'item_type':row['item_type'],'id':row['id'], \
+                'title':row['title'], 'author':row['author'], 'position':row['position'], 'range':row['range'], \
+                'borrowed':row['borrowed'], 'url':'/book/'+str(row['id'])}
+                requested = getRequestForPosition(device['id'], row['position'], shelf) #get requested elements from server (mobile will be set via SSE)
+                if requested:
+                    element[row['led_column']]['requested']=True
+            if statics[shelf]:
+                for static in statics[shelf]:
+                    element[static['led_column']] = {'item_type':static['item_type'],'id':None, 'position':static['position']}
+            elements[shelf] = sorted(element.items())
+    return elements   
+
 def getBook(book_id, user_id):
 	cursor = mydb.cursor(dictionary=True)
 	cursor.execute("SELECT `id`, `isbn`, `title`, `subtitle`, `ocr_keywords` as keywords, `author`, `editor`, `year`, `pages`, \
@@ -30,6 +62,7 @@ def getBooksForRow(app_id, numrow) :
     cursor.execute("SELECT bb.`id`, bb.`title`, bb.`author`, bp.`position`, bp.`range`, bp.`row`, bp.`item_type`, bp.`led_column`,\
         bp.`borrowed` FROM biblio_book bb inner join biblio_position bp on bp.id_item=bb.id and bp.item_type='book'\
         inner join biblio_app app on bp.id_app=app.id where app.id=%s and bp.row=%s order by row, led_column",(app_id,numrow))
+    #print(cursor._executed)
     return cursor.fetchall()
 
 def statsBooks(app_id, numrow):

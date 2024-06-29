@@ -1,12 +1,39 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, Response
+#==============================================================================
+# Copyright (C) 2024  Emmanuel Mazurier <contact@bibliob.us>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#==============================================================================
+
+from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query
 from fastapi.responses import RedirectResponse
-from typing import Union, Annotated
+from typing import Union, Annotated, List
 import json
-from models import Book, Device, User
+from models import Book, Position, Device, User
 import tools
 
 app = FastAPI(title="Bibliobus API",
-              description="Rest API to manage position datas from and to \"Bibus\" devices")
+              summary="Rest API to manage item positions from and to \"Bibus\" devices",
+              version="0.1.0",
+              contact={
+                "name":"Bibliobus",
+                "url":"https://bibliob.us/fr",
+                "email":"contact@bibliob.us"
+              },
+              license_info={
+                    "name": "GPLv3",
+                    "url": "https://www.gnu.org/licenses/quick-guide-gplv3.html",
+            })
 
 def get_auth_user(request: Request):
     """verify that user has a valid session"""
@@ -53,35 +80,21 @@ def update_book(request: Request, book_id: int, item: Book.Book):
 @app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
 def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
     device = json.loads(request.cookies.get("Device"))
-    shelfs = range(1,device['nb_lines']+1)
-    if numshelf:
-        shelfs = [numshelf]
-    elements = {}
-    stats = {}
-    statics = {}
-    for shelf in shelfs:
-        books = Book.getBooksForRow(device['id'], shelf)
-        statics[shelf] = Book.getStaticPositions(device['id'], shelf)   
-        if books:
-          statBooks = Book.statsBooks(device['id'], shelf)
-          statPositions = Book.statsPositions(device['id'], shelf)
-          positionRate = 0
-          if statPositions['totpos'] != None:
-            positionRate = round((statPositions['totpos']/device['nb_cols'])*100)
-          stats[shelf] = {'nbbooks':statBooks['nbbooks'], 'positionRate':positionRate}        
-          element = {}
-          for row in books:     
-            element[row['led_column']] = {'item_type':row['item_type'],'id':row['id'], \
-            'title':row['title'], 'author':row['author'], 'position':row['position'], 'range':row['range'], \
-            'borrowed':row['borrowed'], 'url':'/book/'+str(row['id'])}
-            requested = Book.getRequestForPosition(device['id'], row['position'], shelf) #get requested elements from server (mobile will be set via SSE)
-            if requested:
-              element[row['led_column']]['requested']=True
-          if statics[shelf]:
-            for static in statics[shelf]:
-              element[static['led_column']] = {'item_type':static['item_type'],'id':None, 'position':static['position']}
-          elements[shelf] = sorted(element.items())
+    elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
+
+@app.post("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
+def books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: bool | None = 0):
+    """Order positions and compute intervals for given books list ids"""
+    user_id = int(request.cookies.get("UserId"))
+    device = json.loads(request.cookies.get("Device"))
+    # set positions and intervals for books
+    positions = None
+    if book_ids is not None:
+        if reset_positions:
+            Position.cleanPositionsForShelf(device['id'], numshelf)
+        positions = Position.updatePositionsForShelf(user_id, numshelf, book_ids, device)
+    return {"numshelf": numshelf, "positions": positions}
 
 @app.get("/device-discover/{uuid}")
 def get_device_infos(uuid: str):
@@ -121,7 +134,7 @@ def get_devices_for_user(request: Request):
     devices = Device.getDevicesForUser(user_id) 
     if devices:
         return {"devices": devices}
-    raise HTTPException(status_code=404)    
+    raise HTTPException(status_code=404)
 
 @app.post("/logout")
 async def session_logout(response: Response):

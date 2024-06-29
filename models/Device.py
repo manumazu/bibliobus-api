@@ -4,7 +4,7 @@ from db import mydb
 
 # biblio_app table definition
 
-class Module(BaseModel):
+class Device(BaseModel):
     id: int
     arduino_name: str
     id_ble: str
