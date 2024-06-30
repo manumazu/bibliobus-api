@@ -49,7 +49,7 @@ async def root():
     return {"message": "Welcome to Bibliobus API"}
 
 @app.get("/book/{book_id}", dependencies=[Depends(get_auth_user)])
-def get_book(request: Request, book_id: Union[int, None] = None):
+async def get_book(request: Request, book_id: Union[int, None] = None):
     """Get book for device bookshelf"""
     user_id = request.cookies.get("UserId")
     result = Book.getBook(book_id, user_id)
@@ -78,17 +78,16 @@ def update_book(request: Request, book_id: int, item: Book.Book):
     return book    
 
 @app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
-def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
+async def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
     device = json.loads(request.cookies.get("Device"))
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
 @app.get("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
-def get_books_order(request: Request, numshelf: int):
-    """Order positions and compute intervals for given books list ids"""
+async def get_books_order(request: Request, numshelf: int):
+    """Get book positions for given shelf"""
     user_id = int(request.cookies.get("UserId"))
     device = json.loads(request.cookies.get("Device"))
-    # get positions and intervals for books
     sortable = []
     positions = Position.getPositionsForShelf(device['id'], numshelf)
     for pos in positions:
@@ -110,7 +109,7 @@ def update_books_order(request: Request, numshelf: int, book_ids: List[int] = Qu
     return {"numshelf": numshelf, "positions": positions}
 
 @app.get("/device-discover/{uuid}")
-def get_device_infos(uuid: str):
+async def get_device_infos(uuid: str):
     """Get device infos for current BLE uuid"""
     uuid = tools.uuidDecode(uuid) 
     if uuid:
@@ -123,7 +122,7 @@ def get_device_infos(uuid: str):
 
 # join device using token
 @app.post("/device-login")
-def login_to_device(user_token: str):
+async def login_to_device(user_token: str):
     """Open session on device with authenticated token"""
     verif = tools.verifyToken('guest', user_token)
     if verif is False:
@@ -141,7 +140,7 @@ def login_to_device(user_token: str):
     raise HTTPException(status_code=401)
 
 @app.get("/devices", dependencies=[Depends(get_auth_user)])
-def get_devices_for_user(request: Request):
+async def get_devices_for_user(request: Request):
     """Get devices infos for current user"""
     user_id = session_id = request.cookies.get("UserId")
     devices = Device.getDevicesForUser(user_id) 
