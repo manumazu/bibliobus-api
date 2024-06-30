@@ -83,8 +83,21 @@ def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
-@app.post("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
-def books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: bool | None = 0):
+@app.get("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
+def get_books_order(request: Request, numshelf: int):
+    """Order positions and compute intervals for given books list ids"""
+    user_id = int(request.cookies.get("UserId"))
+    device = json.loads(request.cookies.get("Device"))
+    # get positions and intervals for books
+    sortable = []
+    positions = Position.getPositionsForShelf(device['id'], numshelf)
+    for pos in positions:
+        sortable.append({'book':pos['id_item'], 'position':pos['position'], 'fulfillment':int(pos['led_column']+pos['range']), \
+            'led_column':pos['led_column'], 'shelf':numshelf})
+    return {"numshelf": numshelf, "positions": sortable}
+
+@app.put("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
+def update_books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: bool | None = 0):
     """Order positions and compute intervals for given books list ids"""
     user_id = int(request.cookies.get("UserId"))
     device = json.loads(request.cookies.get("Device"))
