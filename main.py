@@ -78,7 +78,7 @@ def update_book(request: Request, book_id: int, item: Book.Book):
     return book    
 
 @app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
-async def get_books_in_bookshelf(request: Request, numshelf: int | None = None):
+async def get_books_in_bookshelf(request: Request, numshelf: Union[int, None] = None):
     device = json.loads(request.cookies.get("Device"))
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
@@ -96,7 +96,7 @@ async def get_books_order(request: Request, numshelf: int):
     return {"numshelf": numshelf, "positions": sortable}
 
 @app.put("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
-def update_books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: bool | None = 0):
+def update_books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
     """Order positions and compute intervals for given books list ids"""
     user_id = int(request.cookies.get("UserId"))
     device = json.loads(request.cookies.get("Device"))
