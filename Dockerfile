@@ -1,6 +1,6 @@
 FROM python:slim
 
-ENV DB_HOST=172.17.0.1
+#ENV DB_HOST=172.17.0.1
 
 COPY . /app
 

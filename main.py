@@ -117,7 +117,8 @@ async def get_device_infos(uuid: str):
         user = Device.getUserForUuid(uuid)
         user_token = tools.setToken('guest', user['email'], uuid)
         total_leds = device['nb_lines'] * device['nb_cols']
-        return {"device": device, "total_leds": total_leds, "token": user_token}
+        device.update({"total_leds": total_leds})
+        return {"device": device, "token": user_token}
     raise HTTPException(status_code=404)
 
 # join device using token
