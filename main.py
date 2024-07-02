@@ -17,6 +17,7 @@
 
 from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Union, Annotated, List
 import json
 from models import Book, Position, Device, User
@@ -34,6 +35,18 @@ app = FastAPI(title="Bibliobus API",
                     "name": "GPLv3",
                     "url": "https://www.gnu.org/licenses/quick-guide-gplv3.html",
             })
+
+origins = [
+    "http://localhost",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_auth_user(request: Request):
     """verify that user has a valid session"""
