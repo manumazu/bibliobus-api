@@ -1,8 +1,10 @@
 from fastapi import Path
 from typing import Union, Annotated
 from pydantic import BaseModel
-from db import mydb
+from db import getMyDB
 import tools
+
+mydb = getMyDB()
 
 class Book(BaseModel):
     # id_user: int
@@ -178,3 +180,13 @@ def getRequestForPosition(app_id, position, numrow) :
     cursor.execute("SELECT * FROM biblio_request where id_app=%s and `column`=%s and `row`=%s \
     and `action`='add'", (app_id, position, numrow))
     return cursor.fetchone()
+
+def getAuthors(app_id, letter):
+    cursor = mydb.cursor(dictionary=True)
+    searchLetter = letter+"%"
+    cursor.execute("SELECT bt.id, bt.tag, count(bb.id) as nbnode FROM `biblio_tags` bt \
+        INNER JOIN biblio_tag_node btn ON bt.id = btn.id_tag \
+        INNER JOIN biblio_book bb ON btn.id_node = bb.id \
+        INNER JOIN biblio_position bp ON bb.id = bp.id_item and bp.item_type='book' \
+        WHERE bt.id_taxonomy=2 and bp.id_app=%s and bt.tag like %s GROUP BY bt.id ORDER BY bt.tag", (app_id, searchLetter))
+    return cursor.fetchall()

@@ -1,9 +1,11 @@
 from fastapi import Path
 from typing import Union, Annotated
 from pydantic import BaseModel
-from db import mydb
+from db import getMyDB
 from models import Book
 import tools
+
+mydb = getMyDB()
 
 # biblio_app table definition
 

@@ -1,6 +1,8 @@
 from typing import Union
 from pydantic import BaseModel
-from db import mydb
+from db import getMyDB
+
+mydb = getMyDB()
 
 # biblio_app table definition
 
