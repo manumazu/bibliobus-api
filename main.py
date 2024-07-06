@@ -18,7 +18,7 @@
 from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query, status
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Union, Annotated, List
 import json
 from models import Book, Position, Device, Token, User
@@ -50,20 +50,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="device-login")
+device_auth_scheme = HTTPBearer()
 
-def get_auth_device(token: Annotated[str, Depends(oauth2_scheme)]):
+def get_auth_device(token: HTTPAuthorizationCredentials = Depends(device_auth_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = Token.access_token_decode(token)
+        payload = Token.access_token_decode(token.credentials)
+        #print(payload)
         user_id: int = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-        #token_data = TokenData(username=username)
     except Token.InvalidTokenError:
         raise credentials_exception
     user = User.get_user(user_id)
@@ -144,7 +144,7 @@ async def get_device_infos(uuid: str):
     uuid = tools.uuidDecode(uuid) 
     if uuid:
         device = Device.getDeviceForUuid(uuid)
-        device_token = Token.set_device_token('guest', uuid)
+        device_token = Token.set_device_token('guest', uuid, 5)
         total_leds = device['nb_lines'] * device['nb_cols']
         device.update({"total_leds": total_leds})
         return {"device": device, "device_token": device_token}
@@ -168,10 +168,6 @@ async def login_to_device(device_token: str):
             data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
         )
         return Token.Token(access_token=access_token, token_type="bearer")
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Bad device"
-    )
 
 @app.get("/devices")
 async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]):
@@ -183,9 +179,6 @@ async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_d
     raise HTTPException(status_code=404)
 
 @app.post("/logout")
-async def session_logout(response: Response):
-    response.delete_cookie(key="Authorization")
-    response.delete_cookie(key="UserId")
-    response.delete_cookie(key="Device")
+async def session_logout():
     #SESSION_DB.pop(RANDON_SESSION_ID, None)
     return {"status": "logged out"}

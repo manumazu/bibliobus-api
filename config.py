@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     db_password: str = os.getenv('DB_PASSWORD')
     db_name: str = os.getenv('DB_NAME')
     secret_key: str = os.getenv('SECRET_KEY')
+    secret_key_access_token: str = os.getenv('SECRET_KEY_ACCESS_TOKEN')
 
 settings = Settings()
