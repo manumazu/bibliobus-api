@@ -16,9 +16,9 @@ class User(BaseModel):
     created_at: str
     updated_at: str
 
-def getUser(email):
+def get_user(user_id):
   cursor = mydb.cursor(dictionary=True)
-  cursor.execute("SELECT id, email, password, firstname, lastname FROM biblio_user WHERE email=%s", [email])
+  cursor.execute("SELECT id, email, password, firstname, lastname FROM biblio_user WHERE id=%s", [user_id])
   user = cursor.fetchone()
   if user:
     return user

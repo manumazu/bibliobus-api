@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #==============================================================================
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query
+from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query, status
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from typing import Union, Annotated, List
 import json
-from models import Book, Position, Device, User
+from models import Book, Position, Device, Token, User
 import tools
 
 app = FastAPI(title="Bibliobus API",
@@ -38,6 +39,7 @@ app = FastAPI(title="Bibliobus API",
 
 origins = [
     "http://localhost",
+    "http://127.0.0.1:3000"
 ]
 
 app.add_middleware(
@@ -48,59 +50,73 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_auth_user(request: Request):
-    """verify that user has a valid session"""
-    session_id = request.cookies.get("Authorization")
-    if not session_id:
-        raise HTTPException(status_code=401)
-    # if session_id not in SESSION_DB:
-    #     raise HTTPException(status_code=403)
-    return True
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="device-login")
+
+def get_auth_device(token: Annotated[str, Depends(oauth2_scheme)]):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = Token.access_token_decode(token)
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        #token_data = TokenData(username=username)
+    except Token.InvalidTokenError:
+        raise credentials_exception
+    user = User.get_user(user_id)
+    if user is None:
+        raise credentials_exception
+    return {"user": user, "device": payload['device']}
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to Bibliobus API"}
 
-@app.get("/book/{book_id}", dependencies=[Depends(get_auth_user)])
-async def get_book(request: Request, book_id: Union[int, None] = None):
+@app.get("/book/{book_id}")
+async def get_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None):
     """Get book for device bookshelf"""
-    user_id = request.cookies.get("UserId")
-    result = Book.getBook(book_id, user_id)
+    user = current_device.get('user')
+    result = Book.getBook(book_id, user['id'])
     return {"book": result}
 
-@app.post("/book", dependencies=[Depends(get_auth_user)])
-def create_book(request: Request, item: Book.Book):
+@app.post("/book")
+def create_book(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):
     """Create new book for current device"""
-    user_id = int(request.cookies.get("UserId"))
-    device = json.loads(request.cookies.get("Device"))
+    device = current_device.get('device')
+    user = current_device.get('user')
     bookDict = item.dict()
-    book = Book.newBook(bookDict, user_id, device['id'])
+    book = Book.newBook(bookDict, user['id'], device['id'])
     # save tags
-    Book.setTagsBook(book, user_id, device['id'], None)
+    Book.setTagsBook(book, user['id'], device['id'], None)
     return book
 
-@app.put("/book/{book_id}", dependencies=[Depends(get_auth_user)])
-def update_book(request: Request, book_id: int, item: Book.Book):
+@app.put("/book/{book_id}")
+def update_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, item: Book.Book):
     """Update book data"""
-    user_id = int(request.cookies.get("UserId"))
-    device = json.loads(request.cookies.get("Device"))
+    device = current_device.get('device')
+    user = current_device.get('user')
     bookDict = item.dict()
-    book = Book.updateBook(bookDict, book_id, user_id, device['id'])
+    book = Book.updateBook(bookDict, book_id, user['id'], device['id'])
     # save tags
     Book.setTagsBook(book, user_id, device['id'], None)
     return book    
 
-@app.get("/bookshelf", dependencies=[Depends(get_auth_user)])
-async def get_books_in_bookshelf(request: Request, numshelf: Union[int, None] = None):
-    device = json.loads(request.cookies.get("Device"))
+@app.get("/bookshelf")
+async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: Union[int, None] = None):
+    """Get books list for current connected device"""
+    device = current_device.get('device')
+    user = current_device.get('user')
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
-@app.get("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
-async def get_books_order(request: Request, numshelf: int):
-    """Get book positions for given shelf"""
-    user_id = int(request.cookies.get("UserId"))
-    device = json.loads(request.cookies.get("Device"))
+@app.get("/books-order/{numshelf}")
+async def get_books_order(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int):
+    """Get book positions for current device"""
+    device = current_device.get('device')
+    user = current_device.get('user')
     sortable = []
     positions = Position.getPositionsForShelf(device['id'], numshelf)
     for pos in positions:
@@ -108,56 +124,60 @@ async def get_books_order(request: Request, numshelf: int):
             'led_column':pos['led_column'], 'shelf':numshelf})
     return {"numshelf": numshelf, "positions": sortable}
 
-@app.put("/books-order/{numshelf}", dependencies=[Depends(get_auth_user)])
-def update_books_order(request: Request, numshelf: int, book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
+@app.put("/books-order/{numshelf}")
+def update_books_order(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int, \
+    book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
     """Order positions and compute intervals for given books list ids"""
-    user_id = int(request.cookies.get("UserId"))
-    device = json.loads(request.cookies.get("Device"))
+    device = current_device.get('device')
+    user = current_device.get('user')
     # set positions and intervals for books
     positions = None
     if book_ids is not None:
         if reset_positions:
             Position.cleanPositionsForShelf(device['id'], numshelf)
-        positions = Position.updatePositionsForShelf(user_id, numshelf, book_ids, device)
+        positions = Position.updatePositionsForShelf(user['id'], numshelf, book_ids, device)
     return {"numshelf": numshelf, "positions": positions}
 
 @app.get("/device-discover/{uuid}")
 async def get_device_infos(uuid: str):
-    """Get device infos for current BLE uuid"""
+    """Get device infos for current BLE uuid and generate device's token"""
     uuid = tools.uuidDecode(uuid) 
     if uuid:
         device = Device.getDeviceForUuid(uuid)
-        user = Device.getUserForUuid(uuid)
-        user_token = tools.setToken('guest', user['email'], uuid)
+        device_token = Token.set_device_token('guest', uuid)
         total_leds = device['nb_lines'] * device['nb_cols']
         device.update({"total_leds": total_leds})
-        return {"device": device, "token": user_token}
+        return {"device": device, "device_token": device_token}
     raise HTTPException(status_code=404)
 
 # join device using token
 @app.post("/device-login")
-async def login_to_device(user_token: str):
-    """Open session on device with authenticated token"""
-    verif = tools.verifyToken('guest', user_token)
-    if verif is False:
-        raise HTTPException(status_code=401)
-    user_id, uuid = verif.split('|')
-    user = User.getUser(user_id)
+async def login_to_device(device_token: str):
+    """Open auth on device with device token and generate access_token for datas"""
+    uuid = Token.verify_device_token('guest', device_token)
+    if uuid is False:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    user = Device.getUserForUuid(uuid)
     device = Device.getDeviceForUuid(uuid)
     if user and device:
-        response = RedirectResponse("/bookshelf", status_code=302)
-        response.set_cookie(key="Authorization", value=user_token)
-        response.set_cookie(key="UserId", value=user['id'])
-        response.set_cookie(key="Device", value=json.dumps(device))
-        #SESSION_DB[RANDON_SESSION_ID] = username
-        return response
-    raise HTTPException(status_code=401)
+        access_token_expires = Token.set_token_epxires(15)
+        access_token = Token.create_access_token(
+            data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
+        )
+        return Token.Token(access_token=access_token, token_type="bearer")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Bad device"
+    )
 
-@app.get("/devices", dependencies=[Depends(get_auth_user)])
-async def get_devices_for_user(request: Request):
+@app.get("/devices")
+async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]):
     """Get devices infos for current user"""
-    user_id = session_id = request.cookies.get("UserId")
-    devices = Device.getDevicesForUser(user_id) 
+    user = current_device.get('user')
+    devices = Device.getDevicesForUser(user['id']) 
     if devices:
         return {"devices": devices}
     raise HTTPException(status_code=404)
