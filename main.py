@@ -153,12 +153,12 @@ async def get_device_infos(uuid: str):
 # join device using token
 @app.post("/device-login")
 async def login_to_device(device_token: str):
-    """Open auth on device with device token and generate access_token for datas"""
+    """Get auth on device with device_token and generate access_token for datas"""
     uuid = Token.verify_device_token('guest', device_token)
     if uuid is False:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail="Invalid device token"
         )
     user = Device.getUserForUuid(uuid)
     device = Device.getDeviceForUuid(uuid)
@@ -178,7 +178,7 @@ async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_d
         return {"devices": devices}
     raise HTTPException(status_code=404)
 
-@app.post("/logout")
-async def session_logout():
-    #SESSION_DB.pop(RANDON_SESSION_ID, None)
-    return {"status": "logged out"}
+# @app.post("/logout")
+# async def session_logout():
+#     #SESSION_DB.pop(RANDON_SESSION_ID, None)
+#     return {"status": "logged out"}

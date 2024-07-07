@@ -63,12 +63,14 @@ def updatePositionsForShelf(user_id, numshelf, book_ids, device):
 
   return sortable
 
-def cleanPositionsForShelf(app_id, numshelf) :
+def cleanPositionsForShelf(app_id, numshelf):
+  mydb = getMyDB()
   cursor = mydb.cursor()
   cursor.execute("DELETE FROM biblio_position WHERE `item_type`='book' and `id_app`=%s and `row`=%s", (app_id, numshelf))
   mydb.commit()
 
-def getPositionsForShelf(app_id, numshelf) :
+def getPositionsForShelf(app_id, numshelf):
+  mydb = getMyDB()  
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT * FROM biblio_position where id_app=%s and `row`=%s \
     and `item_type`<>'static' order by `position`", (app_id, numshelf))
@@ -88,7 +90,8 @@ def updatePositionBeforeOrder(user_id, app_id, id_book, numshelf, device, new_po
   return getPositionForBook(app_id, id_book)
 
 ''' get book position for given app '''
-def getPositionForBook(app_id, book_id, all_apps = False) :
+def getPositionForBook(app_id, book_id, all_apps = False):
+  mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   if all_apps:
     cursor.execute("SELECT * FROM biblio_position where id_item=%s and item_type='book'", [book_id])
@@ -97,7 +100,8 @@ def getPositionForBook(app_id, book_id, all_apps = False) :
   return cursor.fetchone()
 
 ''' save or update item position '''
-def setPosition(app_id, item_id, position, row, interval, item_type, led_column, shift_position = 0) :
+def setPosition(app_id, item_id, position, row, interval, item_type, led_column, shift_position = 0):
+  mydb = getMyDB()
   cursor = mydb.cursor()
   cursor.execute("INSERT INTO biblio_position (`id_app`, `id_item`, `item_type`, \
       `position`, `row`, `range`, `led_column`, `shiftpos`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY \
@@ -109,14 +113,16 @@ def setPosition(app_id, item_id, position, row, interval, item_type, led_column,
     cursor.execute("UPDATE biblio_book SET id_app=%s WHERE id=%s", (app_id, item_id))
   mydb.commit()
 
-def setLedColumn(app_id, item_id, row, led_column) :
+def setLedColumn(app_id, item_id, row, led_column):
+  mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("UPDATE biblio_position SET `led_column`=%s WHERE `id_app`=%s AND `id_item`=%s AND \
     `item_type`='book' AND `row`=%s", (led_column, app_id, item_id, row))
   mydb.commit()
 
 '''compute sum of books intervals and shifted position (for missing books) for setting physical position'''
-def getLedColumn(app_id, item_id, row, column) :
+def getLedColumn(app_id, item_id, row, column):
+  mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT (sum(`range`) + sum(`shiftpos`)) as `column` FROM `biblio_position` \
     WHERE `position`<%s  and id_app=%s and `row`=%s and id_item <> %s and item_type='book'",(column, app_id, row, item_id))
@@ -137,12 +143,14 @@ def getLedColumn(app_id, item_id, row, column) :
   return res['column']
 
 def getShiftedPositionForBook(app_id, row, item_id):
+  mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT `shiftpos` FROM `biblio_position` \
     WHERE `item_type`='book' AND `id_app`=%s AND `row`=%s AND `id_item`=%s ORDER BY `position`", (app_id, row, item_id))
   return cursor.fetchone()
 
 def getStaticPositions(app_id, row):
+  mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT `led_column`, `range`, position, item_type FROM `biblio_position` \
     WHERE item_type='static' AND id_app=%s AND `row`=%s ORDER BY `position`", (app_id, row))
