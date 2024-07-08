@@ -19,7 +19,7 @@ from fastapi import FastAPI, Request, Depends, HTTPException, Response, Query, s
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from typing import Union, Annotated, List
+from typing import Annotated, Any, List, Union
 import json
 from models import Book, Position, Device, Token, User
 import tools
@@ -76,11 +76,11 @@ async def root():
     return {"message": "Welcome to Bibliobus API"}
 
 @app.get("/book/{book_id}")
-async def get_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None):
+async def get_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None) -> Book.Book:
     """Get book for device bookshelf"""
     user = current_device.get('user')
     result = Book.getBook(book_id, user['id'])
-    return {"book": result}
+    return result
 
 @app.post("/book")
 def create_book(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):
@@ -138,8 +138,8 @@ def update_books_order(current_device: Annotated[str, Depends(get_auth_device)],
         positions = Position.updatePositionsForShelf(user['id'], numshelf, book_ids, device)
     return {"numshelf": numshelf, "positions": positions}
 
-@app.get("/device-discover/{uuid}")
-async def get_device_infos(uuid: str):
+@app.get("/device-discover/{uuid}", response_model=Device.Device)
+async def get_device_infos(uuid: str) -> Any:
     """Get device infos for current BLE uuid and generate device's token"""
     uuid = tools.uuidDecode(uuid) 
     if uuid:
@@ -147,7 +147,8 @@ async def get_device_infos(uuid: str):
         device_token = Token.set_device_token('guest', uuid, 5)
         total_leds = device['nb_lines'] * device['nb_cols']
         device.update({"total_leds": total_leds})
-        return {"device": device, "device_token": device_token}
+        device.update({"login": Device.DeviceToken(device_token=device_token)})
+        return device 
     raise HTTPException(status_code=404)
 
 # join device using token

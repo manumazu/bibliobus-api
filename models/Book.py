@@ -17,7 +17,7 @@ class Book(BaseModel):
     pages: Annotated[int, Path(title="Number of pages", ge=1)]
     reference: Union[str, None] = None
     description: Union[str, None] = None
-    width: Annotated[Union[int, None], Path(title="Book width in millimeter", ge=10)] = None
+    width: Annotated[Union[int, None], Path(title="Book width in millimeter", gte=10)] = None
 
 def getBooksForShelf(numshelf, device):
     ''' Get list of books order by positions '''

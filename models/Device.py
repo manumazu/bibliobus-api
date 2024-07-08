@@ -2,9 +2,13 @@ from typing import Union
 from pydantic import BaseModel
 from db import getMyDB
 
-# biblio_app table definition
 
+class DeviceToken(BaseModel):
+    device_token: str
+
+# biblio_app table definition
 class Device(BaseModel):
+    login: DeviceToken
     id: int
     arduino_name: str
     id_ble: str
@@ -15,6 +19,7 @@ class Device(BaseModel):
     mood_color: Union[str, None] = None
     uuid: Union[str, None] = None
     mac: Union[str, None] = None
+    total_leds: Union[int, None] = None
 
 def getDeviceForUuid(uuid):
   mydb = getMyDB()
