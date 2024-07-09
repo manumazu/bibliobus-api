@@ -8,7 +8,7 @@ class DeviceToken(BaseModel):
 
 # biblio_app table definition
 class Device(BaseModel):
-    login: DeviceToken
+    login: Union[DeviceToken, None] = None
     id: int
     arduino_name: str
     id_ble: str

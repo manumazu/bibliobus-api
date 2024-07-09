@@ -80,6 +80,8 @@ async def get_book(current_device: Annotated[str, Depends(get_auth_device)], boo
     """Get book for device bookshelf"""
     user = current_device.get('user')
     result = Book.getBook(book_id, user['id'])
+    if not result:
+        raise HTTPException(status_code=404)
     return result
 
 @app.post("/book")
@@ -171,12 +173,12 @@ async def login_to_device(device_token: str):
         return Token.Token(access_token=access_token, token_type="bearer")
 
 @app.get("/devices")
-async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]):
+async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]) -> List[Device.Device]:
     """Get devices infos for current user"""
     user = current_device.get('user')
     devices = Device.getDevicesForUser(user['id']) 
     if devices:
-        return {"devices": devices}
+        return devices
     raise HTTPException(status_code=404)
 
 # @app.post("/logout")
