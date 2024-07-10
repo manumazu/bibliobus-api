@@ -5,6 +5,7 @@ from db import getMyDB
 
 class DeviceToken(BaseModel):
     device_token: str
+    url: str
 
 # biblio_app table definition
 class Device(BaseModel):

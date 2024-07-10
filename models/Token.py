@@ -10,7 +10,7 @@ from config import settings
 # openssl rand -hex 32
 ALGORITHM = "HS256"
 
-class Token(BaseModel):
+class AccessToken(BaseModel):
     access_token: str
     token_type: str
 
