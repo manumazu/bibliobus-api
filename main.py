@@ -69,7 +69,7 @@ def get_auth_device(token: HTTPAuthorizationCredentials = Depends(device_auth_sc
     user = User.get_user(user_id)
     if user is None:
         raise credentials_exception
-    return {"user": user, "device": payload['device']}
+    return {"user": user, "device": payload.get("device")}
 
 @app.get("/")
 async def root():
@@ -79,10 +79,10 @@ async def root():
 async def get_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None) -> Book.Book:
     """Get book for device bookshelf"""
     user = current_device.get('user')
-    result = Book.getBook(book_id, user['id'])
-    if not result:
+    book = Book.getBook(book_id, user['id'])
+    if not book:
         raise HTTPException(status_code=404)
-    return result
+    return book
 
 @app.post("/book")
 def create_book(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):
@@ -150,8 +150,6 @@ async def get_device_infos(uuid: str) -> Device.Device:
         total_leds = device['nb_lines'] * device['nb_cols']
         device.update({"total_leds": total_leds})
         device.update({"login": Device.DeviceToken(device_token=device_token, url="/device-login")})
-        #print(Device.DeviceToken(device_token=device_token, url="/device-login"))
-        #device.update(Device.DeviceToken(device_token=device_token, url="/device-login"))
         return device 
     raise HTTPException(status_code=404)
 
@@ -167,12 +165,15 @@ async def login_to_device(device_token: str) -> Token.AccessToken:
         )
     user = Device.getUserForUuid(uuid)
     device = Device.getDeviceForUuid(uuid)
-    if user and device:
-        access_token_expires = Token.set_token_epxires(15)
-        access_token = Token.create_access_token(
-            data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
-        )
-        return Token.AccessToken(access_token=access_token, token_type="bearer")
+    if not user:
+        raise HTTPException(status_code=403)
+    if not device:
+        raise HTTPException(status_code=404)
+    access_token_expires = Token.set_token_epxires(60)
+    access_token = Token.create_access_token(
+        data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
+    )
+    return Token.AccessToken(access_token=access_token, token_type="bearer")
 
 @app.get("/devices")
 async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]) -> List[Device.Device]:
@@ -182,6 +183,67 @@ async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_d
     if devices:
         return devices
     raise HTTPException(status_code=404)
+
+@app.get("/position/{book_id}")
+async def get_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Position.Position:
+    """Get book position in current bookshelf"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    position = Position.getPositionForBook(device['id'], book_id)
+    if not position:
+        raise HTTPException(status_code=404)
+    return position
+
+@app.post("/position")
+async def create_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position) -> Position.Position:
+    """set new position for book : if exists, return error"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    positionDict = item.dict()
+    book_id = positionDict['id_item']
+    position = Position.getPositionForBook(device['id'], book_id)
+    # return error if position already exists
+    if position:
+        raise HTTPException(
+            status_code=418,
+            detail=f"A position already exists for book {book_id}"
+        )
+    # prevent create position for item in other bookshelf
+    if int(device['id']) != int(positionDict['id_app']):
+        raise HTTPException(
+            status_code=418,
+            detail=f"A position for item {book_id} exists in app id {device['id']} different than requested {positionDict['id_app']}"
+        )
+    #save new position
+    Position.setPosition(device['id'], book_id, positionDict['position'], positionDict['row'], positionDict['range'], positionDict['item_type'], 0)
+    position = Position.getPositionForBook(device['id'], book_id)
+    led_columns_sum = Position.getLedColumn(device['id'], book_id, position['row'], position['position'])
+    Position.setLedColumn(device['id'], book_id, position['row'], led_columns_sum)
+    position = Position.getPositionForBook(device['id'], book_id)
+    return position
+
+@app.delete("/position")
+async def delete_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position):
+    """delete position for given book"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    positionDict = item.dict()
+    book_id = positionDict['id_item']
+    position = Position.getPositionForBook(device['id'], book_id)
+    # return error if position already exists
+    if not position:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Position not found for item {book_id}"
+        )
+    # prevent delete position for item in other bookshelf
+    if int(position['id_app']) != int(positionDict['id_app']):
+        raise HTTPException(
+            status_code=418,
+            detail=f"A position for item {book_id} exists in bookshelf {position['id_app']} different than requested {positionDict['id_app']}"
+        )
+    Position.deletePosition(device['id'], book_id, positionDict['item_type'], positionDict['row'])
+    return {"status": "ok"}
 
 # @app.post("/logout")
 # async def session_logout():

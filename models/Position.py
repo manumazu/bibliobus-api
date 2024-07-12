@@ -1,4 +1,4 @@
-from fastapi import Path
+from fastapi import Path, HTTPException
 from typing import Union, Annotated
 from pydantic import BaseModel
 from db import getMyDB
@@ -12,13 +12,13 @@ mydb = getMyDB()
 class Position(BaseModel):
     id_app: int
     id_item: int
-    item_type: str
+    item_type: Annotated[str, Path(title="Type of item")] = "book"
     position: int
     row: int
     range: int
-    shiftpos: int
-    led_column: int
-    borrowed: bool
+    shiftpos: Union[int, None] = None
+    led_column: Annotated[int, Path(title="Defined by application", ge=1)] = 1
+    borrowed: Union[bool, None] = False
 
 def updatePositionsForShelf(user_id, numshelf, book_ids, device):
   ''' Compute intervals and update positions for items in current shelf '''
@@ -108,10 +108,20 @@ def setPosition(app_id, item_id, position, row, interval, item_type, led_column,
       UPDATE position=%s, row=%s, `range`=%s, `led_column`=%s, `shiftpos`=%s", \
       (app_id, item_id, item_type, position, row, interval, led_column, shift_position, \
         position, row, interval, led_column, shift_position))
+  mydb.commit()
   #udpate app for book item
   if item_type == 'book':
-    cursor.execute("UPDATE biblio_book SET id_app=%s WHERE id=%s", (app_id, item_id))
+    Book.updateAppBook(app_id, item_id) 
+
+def deletePosition(app_id, item_id, item_type, numrow):
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("DELETE FROM biblio_position WHERE `id_item`=%s and `item_type`=%s and `id_app`=%s and `row`=%s", \
+    (item_id, item_type, app_id, numrow))
   mydb.commit()
+  #udpate app for book item
+  if item_type == 'book':
+    Book.updateAppBook(app_id, item_id)  
 
 def setLedColumn(app_id, item_id, row, led_column):
   mydb = getMyDB()

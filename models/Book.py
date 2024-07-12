@@ -203,3 +203,9 @@ def getAuthors(app_id, letter):
         INNER JOIN biblio_position bp ON bb.id = bp.id_item and bp.item_type='book' \
         WHERE bt.id_taxonomy=2 and bp.id_app=%s and bt.tag like %s GROUP BY bt.id ORDER BY bt.tag", (app_id, searchLetter))
     return cursor.fetchall()
+
+def updateAppBook(app_id, item_id) :
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("UPDATE biblio_book SET id_app=%s WHERE id=%s", (app_id, item_id))
+  mydb.commit()
