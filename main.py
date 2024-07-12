@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Annotated, Any, List, Union
 import json
+from routers import devices
 from models import Book, Position, Device, Token, User
 import tools
 
@@ -140,49 +141,51 @@ def update_books_order(current_device: Annotated[str, Depends(get_auth_device)],
         positions = Position.updatePositionsForShelf(user['id'], numshelf, book_ids, device)
     return {"numshelf": numshelf, "positions": positions}
 
-@app.get("/device-discover/{uuid}") #, response_model=Device.Device)
-async def get_device_infos(uuid: str) -> Device.Device:
-    """Get device infos for current BLE uuid and generate device's token"""
-    uuid = tools.uuidDecode(uuid) 
-    if uuid:
-        device = Device.getDeviceForUuid(uuid)
-        device_token = Token.set_device_token('guest', uuid, 5)
-        total_leds = device['nb_lines'] * device['nb_cols']
-        device.update({"total_leds": total_leds})
-        device.update({"login": Device.DeviceToken(device_token=device_token, url="/device-login")})
-        return device 
-    raise HTTPException(status_code=404)
+app.include_router(devices.router)
 
-# join device using token
-@app.post("/device-login")
-async def login_to_device(device_token: str) -> Token.AccessToken:
-    """Get auth on device with device_token and generate access_token for datas"""
-    uuid = Token.verify_device_token('guest', device_token)
-    if uuid is False:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid device token"
-        )
-    user = Device.getUserForUuid(uuid)
-    device = Device.getDeviceForUuid(uuid)
-    if not user:
-        raise HTTPException(status_code=403)
-    if not device:
-        raise HTTPException(status_code=404)
-    access_token_expires = Token.set_token_epxires(60)
-    access_token = Token.create_access_token(
-        data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
-    )
-    return Token.AccessToken(access_token=access_token, token_type="bearer")
+# @app.get("/device-discover/{uuid}") #, response_model=Device.Device)
+# async def get_device_infos(uuid: str) -> Device.Device:
+#     """Get device infos for current BLE uuid and generate device's token"""
+#     uuid = tools.uuidDecode(uuid) 
+#     if uuid:
+#         device = Device.getDeviceForUuid(uuid)
+#         device_token = Token.set_device_token('guest', uuid, 5)
+#         total_leds = device['nb_lines'] * device['nb_cols']
+#         device.update({"total_leds": total_leds})
+#         device.update({"login": Device.DeviceToken(device_token=device_token, url="/device-login")})
+#         return device 
+#     raise HTTPException(status_code=404)
 
-@app.get("/devices")
-async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]) -> List[Device.Device]:
-    """Get devices infos for current user"""
-    user = current_device.get('user')
-    devices = Device.getDevicesForUser(user['id']) 
-    if devices:
-        return devices
-    raise HTTPException(status_code=404)
+# # join device using token
+# @app.post("/device-login")
+# async def login_to_device(device_token: str) -> Token.AccessToken:
+#     """Get auth on device with device_token and generate access_token for datas"""
+#     uuid = Token.verify_device_token('guest', device_token)
+#     if uuid is False:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Invalid device token"
+#         )
+#     user = Device.getUserForUuid(uuid)
+#     device = Device.getDeviceForUuid(uuid)
+#     if not user:
+#         raise HTTPException(status_code=403)
+#     if not device:
+#         raise HTTPException(status_code=404)
+#     access_token_expires = Token.set_token_epxires(60)
+#     access_token = Token.create_access_token(
+#         data={"sub": user['id'], "device": device}, expires_delta=access_token_expires
+#     )
+#     return Token.AccessToken(access_token=access_token, token_type="bearer")
+
+# @app.get("/devices")
+# async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]) -> List[Device.Device]:
+#     """Get devices infos for current user"""
+#     user = current_device.get('user')
+#     devices = Device.getDevicesForUser(user['id']) 
+#     if devices:
+#         return devices
+#     raise HTTPException(status_code=404)
 
 @app.get("/position/{book_id}")
 async def get_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Position.Position:
