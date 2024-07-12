@@ -43,7 +43,6 @@ def newPositionForBook(device, book_id, request):
           status_code=400,
           detail=f"This position is already taken by item id {position['id_item']}. If you want to use this postion for item {request['id_item']}, you must delete position for item id {position['id_item']}, first."
       )
-
   #save new position
   setPosition(device['id'], book_id, request['position'], request['row'], request['range'], request['item_type'], 0)
   position = getPositionForBook(device['id'], book_id)
@@ -66,7 +65,7 @@ def removePositionForBook(device, book_id, request):
   if int(position['id_app']) != int(request['id_app']):
       raise HTTPException(
           status_code=400,
-          detail=f"A position for item {book_id} already exists in app id {position['id_app']}, different than your requested app id {request['id_app']}"
+          detail=f"Item id {book_id} is indexed for app id {position['id_app']}: change your requested app id {request['id_app']}"
       )
   deletePosition(device['id'], book_id, request['item_type'], request['row'])  
 

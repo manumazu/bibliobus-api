@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated, List
 from models import Device, Token
 from dependencies import get_auth_device
