@@ -20,6 +20,56 @@ class Position(BaseModel):
     led_column: Annotated[int, Path(title="Defined by application", ge=1)] = 1
     borrowed: Union[bool, None] = False
 
+def newPositionForBook(device, book_id, request):
+  '''save new position for given item_id and compute led's column number'''
+  position = getPositionForBook(device['id'], book_id)
+  # return error if position already exists
+  if position:
+    raise HTTPException(
+        status_code=400,
+        detail=f"A position already exists for book {book_id}"
+    )
+  # prevent create position for item in other bookshelf
+  if int(device['id']) != int(request['id_app']):
+    raise HTTPException(
+        status_code=400,
+        detail=f"A position for item {book_id} exists in app id {device['id']} different than requested {request['id_app']}"
+    )
+  # prevent create position doublon
+  current_positions = getPositionsForShelf(device['id'], request['row'])
+  for position in current_positions:
+    if int(position['position']) == int(request['position']):
+      raise HTTPException(
+          status_code=400,
+          detail=f"This position is already taken by item id {position['id_item']}. If you want to use this postion for item {request['id_item']}, you must delete position for item id {position['id_item']}, first."
+      )
+
+  #save new position
+  setPosition(device['id'], book_id, request['position'], request['row'], request['range'], request['item_type'], 0)
+  position = getPositionForBook(device['id'], book_id)
+  # compute led's number in shelf
+  led_columns_sum = getLedColumn(device['id'], book_id, position['row'], position['position'])
+  setLedColumn(device['id'], book_id, position['row'], led_columns_sum)
+  position = getPositionForBook(device['id'], book_id)
+  return position
+
+def removePositionForBook(device, book_id, request):
+  '''remove position for given book'''
+  position = getPositionForBook(device['id'], book_id)
+  # return error if position already exists
+  if not position:
+      raise HTTPException(
+          status_code=404,
+          detail=f"Position not found for item {book_id}"
+      )
+  # prevent delete position for item in other bookshelf
+  if int(position['id_app']) != int(request['id_app']):
+      raise HTTPException(
+          status_code=400,
+          detail=f"A position for item {book_id} already exists in app id {position['id_app']}, different than your requested app id {request['id_app']}"
+      )
+  deletePosition(device['id'], book_id, request['item_type'], request['row'])  
+
 def updatePositionsForShelf(user_id, numshelf, book_ids, device):
   ''' Compute intervals and update positions for items in current shelf '''
   sortable = []
@@ -119,9 +169,9 @@ def deletePosition(app_id, item_id, item_type, numrow):
   cursor.execute("DELETE FROM biblio_position WHERE `id_item`=%s and `item_type`=%s and `id_app`=%s and `row`=%s", \
     (item_id, item_type, app_id, numrow))
   mydb.commit()
-  #udpate app for book item
+  #remove app_id for book item
   if item_type == 'book':
-    Book.updateAppBook(app_id, item_id)  
+    Book.updateAppBook(None, item_id)  
 
 def setLedColumn(app_id, item_id, row, led_column):
   mydb = getMyDB()

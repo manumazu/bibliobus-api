@@ -201,25 +201,7 @@ async def create_position_for_item(current_device: Annotated[str, Depends(get_au
     device = current_device.get('device')
     positionDict = item.dict()
     book_id = positionDict['id_item']
-    position = Position.getPositionForBook(device['id'], book_id)
-    # return error if position already exists
-    if position:
-        raise HTTPException(
-            status_code=418,
-            detail=f"A position already exists for book {book_id}"
-        )
-    # prevent create position for item in other bookshelf
-    if int(device['id']) != int(positionDict['id_app']):
-        raise HTTPException(
-            status_code=418,
-            detail=f"A position for item {book_id} exists in app id {device['id']} different than requested {positionDict['id_app']}"
-        )
-    #save new position
-    Position.setPosition(device['id'], book_id, positionDict['position'], positionDict['row'], positionDict['range'], positionDict['item_type'], 0)
-    position = Position.getPositionForBook(device['id'], book_id)
-    led_columns_sum = Position.getLedColumn(device['id'], book_id, position['row'], position['position'])
-    Position.setLedColumn(device['id'], book_id, position['row'], led_columns_sum)
-    position = Position.getPositionForBook(device['id'], book_id)
+    position = Position.newPositionForBook(device, book_id, positionDict)
     return position
 
 @app.delete("/position")
@@ -229,20 +211,7 @@ async def delete_position_for_item(current_device: Annotated[str, Depends(get_au
     device = current_device.get('device')
     positionDict = item.dict()
     book_id = positionDict['id_item']
-    position = Position.getPositionForBook(device['id'], book_id)
-    # return error if position already exists
-    if not position:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Position not found for item {book_id}"
-        )
-    # prevent delete position for item in other bookshelf
-    if int(position['id_app']) != int(positionDict['id_app']):
-        raise HTTPException(
-            status_code=418,
-            detail=f"A position for item {book_id} exists in bookshelf {position['id_app']} different than requested {positionDict['id_app']}"
-        )
-    Position.deletePosition(device['id'], book_id, positionDict['item_type'], positionDict['row'])
+    Position.removePositionForBook(device, book_id, positionDict)
     return {"status": "ok"}
 
 # @app.post("/logout")
