@@ -3,9 +3,14 @@ from typing import Annotated, List, Union
 from models import Position
 from dependencies import get_auth_device
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/positions",
+    tags=["Positions"],
+    dependencies=[Depends(get_auth_device)],
+    responses={404: {"description": "Not found"}},
+)
 
-@router.get("/position/{book_id}")
+@router.get("/item/{book_id}")
 async def get_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Position.Position:
     """Get book position in current bookshelf"""
     user = current_device.get('user')
@@ -15,7 +20,7 @@ async def get_position_for_item(current_device: Annotated[str, Depends(get_auth_
         raise HTTPException(status_code=404)
     return position
 
-@router.post("/position")
+@router.post("/item")
 async def create_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position) -> Position.Position:
     """set new position for book : if exists, return error"""
     user = current_device.get('user')
@@ -25,7 +30,7 @@ async def create_position_for_item(current_device: Annotated[str, Depends(get_au
     position = Position.newPositionForBook(device, book_id, positionDict)
     return position
 
-@router.delete("/position")
+@router.delete("/item")
 async def delete_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position):
     """delete position for given book"""
     user = current_device.get('user')

@@ -4,9 +4,14 @@ from models import Device, Token
 from dependencies import get_auth_device
 import tools
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/devices",
+    tags=["Devices"],
+    #dependencies=[Depends(get_auth_device)],
+    responses={404: {"description": "Not found"}},
+)
 
-@router.get("/device-discover/{uuid}") #, response_model=Device.Device)
+@router.get("/discover/{uuid}") #, response_model=Device.Device)
 async def get_device_infos(uuid: str) -> Device.Device:
     """Get device infos for current BLE uuid and generate device's token"""
     uuid = tools.uuidDecode(uuid) 
@@ -20,7 +25,7 @@ async def get_device_infos(uuid: str) -> Device.Device:
     raise HTTPException(status_code=404)
 
 # join device using token
-@router.post("/device-login")
+@router.post("/login")
 async def login_to_device(device_token: str) -> Token.AccessToken:
     """Get auth on device with device_token and generate access_token for datas"""
     uuid = Token.verify_device_token('guest', device_token)
@@ -41,7 +46,7 @@ async def login_to_device(device_token: str) -> Token.AccessToken:
     )
     return Token.AccessToken(access_token=access_token, token_type="bearer")
 
-@router.get("/devices")
+@router.get("/list")
 async def get_devices_for_user(current_device: Annotated[str, Depends(get_auth_device)]) -> List[Device.Device]:
     """Get devices infos for current user"""
     user = current_device.get('user')

@@ -4,10 +4,15 @@ from models import Book, Position
 from dependencies import get_auth_device
 import tools
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/books",
+    tags=["Books"],
+    dependencies=[Depends(get_auth_device)],
+    responses={404: {"description": "Not found"}},
+)
 
-@router.get("/book/{book_id}")
-async def get_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None) -> Book.Book:
+@router.get("/item/{book_id}")
+async def get_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None) -> Book.Book:
     """Get book for device bookshelf"""
     user = current_device.get('user')
     book = Book.getBook(book_id, user['id'])
@@ -15,8 +20,8 @@ async def get_book(current_device: Annotated[str, Depends(get_auth_device)], boo
         raise HTTPException(status_code=404)
     return book
 
-@router.post("/book")
-def create_book(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):
+@router.post("/item")
+def create_book_item(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):
     """Create new book for current device"""
     device = current_device.get('device')
     user = current_device.get('user')
@@ -26,8 +31,8 @@ def create_book(current_device: Annotated[str, Depends(get_auth_device)], item: 
     Book.setTagsBook(book, user['id'], device['id'], None)
     return book
 
-@router.put("/book/{book_id}")
-def update_book(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, item: Book.Book):
+@router.put("/item/{book_id}")
+def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, item: Book.Book):
     """Update book data"""
     device = current_device.get('device')
     user = current_device.get('user')
@@ -37,7 +42,7 @@ def update_book(current_device: Annotated[str, Depends(get_auth_device)], book_i
     Book.setTagsBook(book, user_id, device['id'], None)
     return book    
 
-@router.get("/bookshelf")
+@router.get("/shelf")
 async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: Union[int, None] = None):
     """Get books list for current connected device"""
     device = current_device.get('device')
@@ -45,8 +50,8 @@ async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
-@router.get("/books-order/{numshelf}")
-async def get_books_order(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int):
+@router.get("/order/{numshelf}")
+async def get_books_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int):
     """Get book positions for current device"""
     device = current_device.get('device')
     user = current_device.get('user')
@@ -57,8 +62,8 @@ async def get_books_order(current_device: Annotated[str, Depends(get_auth_device
             'led_column':pos['led_column'], 'shelf':numshelf})
     return {"numshelf": numshelf, "positions": sortable}
 
-@router.put("/books-order/{numshelf}")
-def update_books_order(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int, \
+@router.put("/order/{numshelf}")
+def update_books_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int, \
     book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
     """Order positions and compute intervals for given books list ids"""
     device = current_device.get('device')
