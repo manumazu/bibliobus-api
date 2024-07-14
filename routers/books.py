@@ -12,7 +12,7 @@ router = APIRouter(
 )
 
 @router.get("/item/{book_id}")
-async def get_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: Union[int, None] = None) -> Book.Book:
+async def get_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Book.Book:
     """Get book for device bookshelf"""
     user = current_device.get('user')
     book = Book.getBook(book_id, user['id'])
@@ -64,7 +64,7 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
         if items:
             '''set url for authenticate requesting location from app'''
             for j in range(len(items)):
-                items[j]['url'] = f"/positions/request/tag/{items[j]['id']}"
+                items[j]['url'] = f"/requests/tag/{items[j]['id']}"
                 hasRequest = False #db.get_request_for_tag(session['app_id'], items[j]['id'])
                 items[j]['hasRequest'] = hasRequest
         data['elements'].append({'initial':alphabet[i],'items':items})
@@ -80,7 +80,7 @@ async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(ge
     if categories:
         for i in range(len(categories)):
             hasRequest = False #db.get_request_for_tag(session['app_id'], categories[i]['id'])
-            categories[i]['url'] = f"/positions/request/tag/{categories[i]['id']}"
+            categories[i]['url'] = f"/requests/tag/{categories[i]['id']}"
             categories[i]['hasRequest'] = hasRequest
             if categories[i]['color'] is not None:
                 colors = categories[i]['color'].split(",")

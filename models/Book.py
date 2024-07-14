@@ -156,7 +156,24 @@ def getTag(tag):
     cursor = mydb.cursor(dictionary=True)
     cursor.execute("SELECT id, tag, color FROM biblio_tags WHERE tag=%s", [tag])
     return cursor.fetchone()
-  
+
+def getTagById(tag_id, user_id):
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT bt.id, bt.tag, btu.color, bt.id_taxonomy FROM biblio_tags bt \
+        LEFT JOIN biblio_tag_user btu ON bt.id = btu.id_tag and btu.id_user=%s \
+        WHERE id=%s", (user_id, tag_id))
+    return cursor.fetchone()
+
+def getBooksForTag(id_tag, id_app):
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT id_node FROM biblio_tag_node btn \
+        INNER JOIN biblio_tags bt ON bt.id = btn.id_tag \
+        INNER JOIN biblio_book bb ON btn.id_node = bb.id \
+        WHERE btn.id_tag=%s and btn.node_type='book' and bb.id_app=%s", (id_tag, id_app))
+    return cursor.fetchall()
+
 def getIdTaxonomy(label):
     mydb = getMyDB()
     cursor = mydb.cursor(dictionary=True)

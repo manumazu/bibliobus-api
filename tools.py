@@ -48,3 +48,81 @@ def setBookInterval(book, leds_interval):
     else:
       lrange = round(int(nb_pages)/200)
   return lrange
+
+def sortIndexBlocks(elem):
+  return elem['index']
+
+def sortPositions(address):
+  return address['row']*100+address['led_column']
+
+def buildBlockPosition(positions, action):
+  '''build blocks of nearby positions :'''
+  '''agregate intervals and reduce messages to Arduino'''
+
+  cpt = 0
+  blockend = 0  
+  block = {}
+  blocks = []
+  blockelem = []
+  uniqelem = []
+
+  #loop 1 : group nearby positions, and separate isolated postions 
+  for i, pos in enumerate(positions): 
+
+    #check if current pos is following the previous pos
+    if int(pos['led_column']) == int(positions[i-1]['led_column'] + positions[i-1]['interval']) \
+    and pos['color'] == positions[i-1]['color'] and pos['row'] == positions[i-1]['row'] : 
+
+      prevItem = positions[i-1]
+
+      #store node ids inside list
+      if pos['id_node'] not in blockelem:        
+        blockelem.append(pos['id_node'])
+
+      #remove block first element from isolated list
+      idx = prevItem['id_node'] if prevItem['id_node'] > 0 else (prevItem['row']+prevItem['led_column']+prevItem['interval'])
+      if idx in uniqelem:
+        uniqelem.remove(idx)
+
+      #build block element : get first position and agragate intervals
+      cpt+=1
+      blockend += prevItem['interval']
+      if cpt==1:
+        block = {'action':action, 'row':pos['row'], 'index':i, 'start':prevItem['led_column'], \
+        'color':pos['color'], 'id_tag':pos['id_tag'],}
+      block.update({'interval':blockend+pos['interval'], 'nodes':blockelem, 'client':pos['client'], 'date_add':pos['date_add']})
+
+      #populate blocks list
+      if block not in blocks:
+        blocks.append(block)
+        
+    #reinit for next block
+    else:
+
+      block = {}
+      blockelem = []
+      blockend = 0
+      cpt = 0
+
+      #store isolated elements: node_id for books, position for gaming
+      idx = pos['id_node'] if pos['id_node'] > 0 else (pos['row']+pos['led_column']+pos['interval'])
+      uniqelem.append(idx)
+  
+  #loop 2 : build response for isolated elements
+  for i, pos in enumerate(positions):
+    idx = pos['id_node'] if pos['id_node'] > 0 else (pos['row']+pos['led_column']+pos['interval'])
+    for j in uniqelem:
+      if j == idx:
+        blocks.append({'action':action, 'row':pos['row'], 'index':i, 'start':pos['led_column'], \
+          'id_tag':pos['id_tag'], 'color':pos['color'], 'interval':pos['interval'], \
+          'nodes':[pos['id_node']], 'client':pos['client'], 'date_add':pos['date_add']})
+  
+  #print(blocks)
+
+  #reset order for blocks:
+  if(action=='remove'):
+    blocks.sort(key=sortIndexBlocks, reverse=True)
+  else:
+    blocks.sort(key=sortIndexBlocks)
+
+  return blocks
