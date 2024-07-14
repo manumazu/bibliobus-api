@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, List, Union
 from models import Position
 from dependencies import get_auth_device
@@ -39,3 +39,29 @@ async def delete_position_for_item(current_device: Annotated[str, Depends(get_au
     book_id = positionDict['id_item']
     Position.removePositionForBook(device, book_id, positionDict)
     return {"status": "ok"}
+
+@router.get("/order/{numshelf}")
+async def get_items_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int):
+    """Get book positions for current device"""
+    device = current_device.get('device')
+    user = current_device.get('user')
+    sortable = []
+    positions = Position.getPositionsForShelf(device['id'], numshelf)
+    for pos in positions:
+        sortable.append({'book':pos['id_item'], 'position':pos['position'], 'fulfillment':int(pos['led_column']+pos['range']), \
+            'led_column':pos['led_column'], 'shelf':numshelf})
+    return {"numshelf": numshelf, "positions": sortable}
+
+@router.put("/order/{numshelf}")
+def update_items_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int, \
+    book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
+    """Order positions and compute intervals for given books list ids"""
+    device = current_device.get('device')
+    user = current_device.get('user')
+    # set positions and intervals for books
+    positions = None
+    if book_ids is not None:
+        if reset_positions:
+            Position.cleanPositionsForShelf(device['id'], numshelf)
+        positions = Position.updatePositionsForShelf(user['id'], numshelf, book_ids, device)
+    return {"numshelf": numshelf, "positions": positions}

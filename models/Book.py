@@ -193,7 +193,7 @@ def getRequestForPosition(app_id, position, numrow):
     and `action`='add'", (app_id, position, numrow))
     return cursor.fetchone()
 
-def getAuthors(app_id, letter):
+async def getAuthors(app_id, letter):
     mydb = getMyDB()
     cursor = mydb.cursor(dictionary=True)
     searchLetter = letter+"%"

@@ -50,28 +50,23 @@ async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth
     elements = Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
-@router.get("/order/{numshelf}")
-async def get_books_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int):
-    """Get book positions for current device"""
+@router.get("/authors")
+async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]):
+    """Get authors tags for current bookshelf"""
     device = current_device.get('device')
-    user = current_device.get('user')
-    sortable = []
-    positions = Position.getPositionsForShelf(device['id'], numshelf)
-    for pos in positions:
-        sortable.append({'book':pos['id_item'], 'position':pos['position'], 'fulfillment':int(pos['led_column']+pos['range']), \
-            'led_column':pos['led_column'], 'shelf':numshelf})
-    return {"numshelf": numshelf, "positions": sortable}
-
-@router.put("/order/{numshelf}")
-def update_books_order_for_shelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: int, \
-    book_ids: List[int] = Query(None), reset_positions: Union[bool, None] = None):
-    """Order positions and compute intervals for given books list ids"""
-    device = current_device.get('device')
-    user = current_device.get('user')
-    # set positions and intervals for books
-    positions = None
-    if book_ids is not None:
-        if reset_positions:
-            Position.cleanPositionsForShelf(device['id'], numshelf)
-        positions = Position.updatePositionsForShelf(user['id'], numshelf, book_ids, device)
-    return {"numshelf": numshelf, "positions": positions}
+    user = current_device.get('user')    
+    data = {}
+    data['list_title'] = device['arduino_name']
+    data['elements']=[]
+    alphabet = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
+    for i in range(len(alphabet)):
+        items = await Book.getAuthors(device['id'], alphabet[i])
+        if items:
+            '''set url for authenticate requesting location from app'''
+            for j in range(len(items)):
+                items[j]['url'] = f"/positions/request/tag/{items[j]['id']}"
+                hasRequest = False #db.get_request_for_tag(session['app_id'], items[j]['id'])
+                items[j]['hasRequest'] = hasRequest
+        data['elements'].append({'initial':alphabet[i],'items':items})
+    return data
+  
