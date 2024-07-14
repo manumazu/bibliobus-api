@@ -47,7 +47,7 @@ async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth
     """Get books list for current connected device"""
     device = current_device.get('device')
     user = current_device.get('user')
-    elements = Book.getBooksForShelf(numshelf, device)
+    elements = await Book.getBooksForShelf(numshelf, device)
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
 @router.get("/authors")
@@ -60,7 +60,7 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
     data['elements']=[]
     alphabet = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
     for i in range(len(alphabet)):
-        items = await Book.getAuthors(device['id'], alphabet[i])
+        items = await Book.getAuthorsForApp(device['id'], alphabet[i])
         if items:
             '''set url for authenticate requesting location from app'''
             for j in range(len(items)):
@@ -69,4 +69,23 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
                 items[j]['hasRequest'] = hasRequest
         data['elements'].append({'initial':alphabet[i],'items':items})
     return data
-  
+
+@router.get("/categories")
+async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]):
+    device = current_device.get('device')
+    user = current_device.get('user')    
+    categories = await Book.getCategoriesForApp(user['id'], device['id'])
+    data = {}
+    data['list_title'] = device['arduino_name']
+    if categories:
+        for i in range(len(categories)):
+            hasRequest = False #db.get_request_for_tag(session['app_id'], categories[i]['id'])
+            categories[i]['url'] = f"/positions/request/tag/{categories[i]['id']}"
+            categories[i]['hasRequest'] = hasRequest
+            if categories[i]['color'] is not None:
+                colors = categories[i]['color'].split(",")
+                categories[i]['red'] = colors[0]
+                categories[i]['green'] = colors[1]
+                categories[i]['blue'] = colors[2]
+        data['elements']=categories
+        return data

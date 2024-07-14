@@ -19,7 +19,7 @@ class Book(BaseModel):
     description: Union[str, None] = None
     width: Annotated[Union[int, None], Path(title="Book width in millimeter", gte=10)] = None
 
-def getBooksForShelf(numshelf, device):
+async def getBooksForShelf(numshelf, device):
     ''' Get list of books order by positions '''
     shelfs = range(1,device['nb_lines']+1)
     if numshelf:
@@ -193,7 +193,7 @@ def getRequestForPosition(app_id, position, numrow):
     and `action`='add'", (app_id, position, numrow))
     return cursor.fetchone()
 
-async def getAuthors(app_id, letter):
+async def getAuthorsForApp(app_id, letter):
     mydb = getMyDB()
     cursor = mydb.cursor(dictionary=True)
     searchLetter = letter+"%"
@@ -202,6 +202,17 @@ async def getAuthors(app_id, letter):
         INNER JOIN biblio_book bb ON btn.id_node = bb.id \
         INNER JOIN biblio_position bp ON bb.id = bp.id_item and bp.item_type='book' \
         WHERE bt.id_taxonomy=2 and bp.id_app=%s and bt.tag like %s GROUP BY bt.id ORDER BY bt.tag", (app_id, searchLetter))
+    return cursor.fetchall()
+
+async def getCategoriesForApp(id_user, id_app):
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT bt.id, bt.tag, btu.color, count(bb.id) as nbnode FROM `biblio_tags` bt \
+    INNER JOIN biblio_tag_node btn ON bt.id = btn.id_tag \
+    INNER JOIN biblio_tag_user btu ON btn.id_tag = btu.id_tag \
+    INNER JOIN biblio_book bb ON btn.id_node = bb.id \
+    INNER JOIN biblio_position bp ON bb.id = bp.id_item and bp.item_type='book'\
+    WHERE bt.id_taxonomy=1 and bp.id_app=%s and btu.id_user=%s GROUP BY bt.id ORDER BY bt.tag", (id_app, id_user))
     return cursor.fetchall()
 
 def updateAppBook(app_id, item_id) :
