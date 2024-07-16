@@ -36,3 +36,20 @@ def newRequest(app_id, node_id, row, column, interval, led_column, node_type, cl
      row, column, interval, led_column, client, action, tag_id, color, date_time, interval, led_column, \
      client, action, color))
   mydb.commit()
+
+def getRequests(app_id, source, action):
+  '''for requests comming from mobile, send requests created on server only'''  
+  where = ''
+  if source == 'mobile':
+    where = " and `sent`=0 and `client`='server'"
+  mydb = getMyDB()
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT * FROM biblio_request where id_app=%s and `action`=%s" + where,(app_id, action))
+  return cursor.fetchall()
+
+def setRequestSent(app_id, node_id, sent) :
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("UPDATE biblio_request SET `sent`=%s WHERE `id_app`=%s and `id_node`=%s \
+    and `node_type` in ('book', 'static', 'reset')", (sent, app_id, node_id))
+  mydb.commit()

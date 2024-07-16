@@ -205,7 +205,8 @@ def getShiftedPositionForBook(app_id, row, item_id):
   mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT `shiftpos` FROM `biblio_position` \
-    WHERE `item_type`='book' AND `id_app`=%s AND `row`=%s AND `id_item`=%s ORDER BY `position`", (app_id, row, item_id))
+    WHERE `item_type`='book' AND `id_app`=%s AND `row`=%s AND `id_item`=%s ORDER BY `position`", \
+    (app_id, row, item_id))
   return cursor.fetchone()
 
 def getStaticPositions(app_id, row):
