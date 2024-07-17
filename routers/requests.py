@@ -52,7 +52,7 @@ async def events_generator(app_id, source):
         await sleep(.5)
 
 @router.get("/events/{source}")
-async def manage_requested_positions(current_device: Annotated[str, Depends(get_auth_device)], source: str = 'mobile'):
+async def manage_requested_positions_for_event_stream(current_device: Annotated[str, Depends(get_auth_device)], source: str = 'mobile'):
     """Used with SSE: check if request is sent to device, turn on light, and then remove request if leds are turned off"""
     user = current_device.get('user')
     device = current_device.get('device')
@@ -60,8 +60,8 @@ async def manage_requested_positions(current_device: Annotated[str, Depends(get_
 
 @router.post("/tag/{tag_id}")
 def create_request_for_tag_location(current_device: Annotated[str, Depends(get_auth_device)], tag_id: int, action: Union[str, None] = 'add', \
-    client: Union[str, None] = 'server') -> List[Request.Request] :
-    """Get book position in current bookshelf and create requests for lighting on leds"""
+    client: Union[str, None] = 'mobile') -> List[Request.Request] :
+    """Get books position for tags in current bookshelf and create requests for lighting on (action 'add') or off leds (action 'remove')"""
     user = current_device.get('user')
     device = current_device.get('device')
     nodes = Book.getBooksForTag(tag_id, device['id'])
@@ -95,3 +95,20 @@ def create_request_for_tag_location(current_device: Annotated[str, Depends(get_a
     positions.sort(key=tools.sortPositions)
     blocks = tools.buildBlockPosition(positions, action)
     return blocks
+
+@router.post("/book/{book_id}")
+def create_request_for_book_location(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, color: Union[str, None] = None, \
+  action: Union[str, None] = 'add', client: Union[str, None] = 'mobile') -> List[Request.Request] :
+    """Get book position in current bookshelf and create requests for lighting on (action 'add') or off leds (action 'remove')"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    address = Position.getPositionForBook(device['id'], book_id)
+    if address:
+        position = []
+        now = tools.getNow()
+        dateTime = now.strftime("%Y-%m-%d %H:%M:%S")        
+        Request.newRequest(device['id'], book_id, address['row'], address['position'], address['range'], address['led_column'], \
+            'book', client, action, dateTime, None, color)
+        position.append({'action':action, 'row':address['row'], 'start':address['led_column'], 'interval':address['range'], \
+        'nodes': [book_id], 'borrowed':address['borrowed'], 'color':color, 'date_add':dateTime})
+        return position
