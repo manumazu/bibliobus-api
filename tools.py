@@ -5,6 +5,11 @@ import hashlib, base64, re
 def getNow():
   return datetime.now()
 
+def seconds_between_now(d1):
+    #d1 = datetime.strptime(str(d1), "%Y-%m-%d %H:%M:%S")
+    d2 = getNow()
+    return abs((d2 - d1).seconds)
+
 def uuidDecode(encode):
   try:
     decode = base64.b64decode(encode)

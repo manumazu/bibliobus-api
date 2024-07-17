@@ -12,7 +12,7 @@ mydb = getMyDB()
 class Request(BaseModel):
   #id_app: int
   #id_node: int
-  nodes: List
+  nodes: List[int]
   id_tag: Union[int, None] = None
   color: Annotated[Union[str, None], Path(title="RGB values")] = None
   node_type: Annotated[str, Path(title="Type of node")] = "book"
@@ -37,14 +37,15 @@ def newRequest(app_id, node_id, row, column, interval, led_column, node_type, cl
      client, action, color))
   mydb.commit()
 
-def getRequests(app_id, source, action):
+def getRequests(app_id, action, source = None):
   '''for requests coming from mobile, we don't need to send location generated on mobile : events are already sent to device'''  
   where = ''
   if source == 'mobile':
     where = " and `sent`=0 and `client`='server'"
   mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
-  cursor.execute("SELECT * FROM biblio_request where id_app=%s and `action`=%s" + where,(app_id, action))
+  cursor.execute("SELECT * FROM biblio_request where id_app=%s and `action`=%s" + where, (app_id, action))
+  #print(cursor._executed)
   return cursor.fetchall()
 
 def setRequestSent(app_id, node_id, sent) :
@@ -52,4 +53,10 @@ def setRequestSent(app_id, node_id, sent) :
   cursor = mydb.cursor()
   cursor.execute("UPDATE biblio_request SET `sent`=%s WHERE `id_app`=%s and `id_node`=%s \
     and `node_type` in ('book', 'static', 'reset')", (sent, app_id, node_id))
+  mydb.commit()
+
+def removeRequest(app_id, led_column, row) :
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("DELETE FROM biblio_request where id_app=%s and `led_column`=%s and `row`=%s", (app_id, led_column,row)) 
   mydb.commit()
