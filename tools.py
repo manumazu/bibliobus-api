@@ -69,9 +69,6 @@ def buildBlockPosition(positions, action):
   #loop 1 : group nearby positions, and separate isolated postions 
   for i, pos in enumerate(positions): 
 
-    if int(positions[i-1]['id_node']) not in blockelem:  
-      blockelem.append(int(positions[i-1]['id_node']))
-
     #check if current pos is following the previous pos
     if int(pos['led_column']) == int(positions[i-1]['led_column'] + positions[i-1]['interval']) \
     and pos['color'] == positions[i-1]['color'] and pos['row'] == positions[i-1]['row'] : 
@@ -79,6 +76,8 @@ def buildBlockPosition(positions, action):
       prevItem = positions[i-1]
 
       #store node ids inside list
+      if int(prevItem['id_node']) not in blockelem:  
+        blockelem.append(int(prevItem['id_node']))
       if int(pos['id_node']) not in blockelem:        
         blockelem.append(int(pos['id_node']))
 

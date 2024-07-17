@@ -36,16 +36,13 @@ async def events_generator(app_id, source):
 async def manage_requested_positions(current_device: Annotated[str, Depends(get_auth_device)], source: str = 'mobile'):
     """Used with SSE: check if request is sent to device, turn on light, and then remove request if leds are turned off"""
     user = current_device.get('user')
-    device = current_device.get('device')    
-    """We don't need to send request for mobile scope : events are already sent"""
+    device = current_device.get('device')
     return StreamingResponse(events_generator(device['id'], source), media_type="text/event-stream")
 
 @router.post("/tag/{tag_id}")
 def create_request_for_tag_location(current_device: Annotated[str, Depends(get_auth_device)], tag_id: int, action: Union[str, None] = 'add', \
     client: Union[str, None] = 'server') -> List[Request.Request] :
-    """Get book position in current books
-
-    helf"""
+    """Get book position in current bookshelf and create requests for lighting on leds"""
     user = current_device.get('user')
     device = current_device.get('device')
     nodes = Book.getBooksForTag(tag_id, device['id'])

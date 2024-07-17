@@ -38,7 +38,7 @@ def newRequest(app_id, node_id, row, column, interval, led_column, node_type, cl
   mydb.commit()
 
 def getRequests(app_id, source, action):
-  '''for requests comming from mobile, send requests created on server only'''  
+  '''for requests coming from mobile, we don't need to send location generated on mobile : events are already sent to device'''  
   where = ''
   if source == 'mobile':
     where = " and `sent`=0 and `client`='server'"
