@@ -24,6 +24,7 @@ class Request(BaseModel):
   start: Annotated[int, Path(title="Led's number in strip ('led_column' in DB)")]
   action: Annotated[str, Path(title="'add','remove','reset'")]
   client: Annotated[str, Path(title="'server','mobile'")]
+  borrowed: Union[bool, None] = False
 
 #{'action': 'add', 'row': 1, 'index': 0, 'start': 7, 'id_tag': 1, 'color': '51, 102, 255', 'interval': 2, 'nodes': [1], 'client': 'server'}, 
 
@@ -59,4 +60,18 @@ def removeRequest(app_id, led_column, row) :
   mydb = getMyDB()
   cursor = mydb.cursor()
   cursor.execute("DELETE FROM biblio_request where id_app=%s and `led_column`=%s and `row`=%s", (app_id, led_column,row)) 
+  mydb.commit()
+
+def removeResetRequest(app_id) :
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("DELETE FROM biblio_request where id_app=%s and `action`='reset'",(app_id))
+  mydb.commit()
+
+def setRequestForRemove(app_id) :
+  now = tools.getNow()
+  mydb = getMyDB()
+  cursor = mydb.cursor()
+  cursor.execute("UPDATE biblio_request SET `action`='remove', `client`='mobile', `date_add`=%s WHERE `id_app`=%s \
+    and action IN ('add', 'reset')", (now.strftime("%Y-%m-%d %H:%M:%S"), app_id))
   mydb.commit()

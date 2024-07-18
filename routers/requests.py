@@ -40,12 +40,23 @@ async def events_generator(app_id, source):
           'interval':data['range'], 'id_tag':'', 'color':'', 'id_node':data['id_node'], 'client':data['client'], 'date_add':data['date_add']})
         data_to_remove.sort(key=tools.sortPositions)
         blocks += tools.buildBlockPosition(data_to_remove, 'remove')   
-        #hard remove 
-        for data in data_to_remove:
-          diff = tools.seconds_between_now(data['date_add'])
-          #wait for other clients before remove
-          if diff > 3:
-            Request.removeRequest(app_id, data['led_column'], data['row']) 
+        #hard remove
+        for data in requests:
+            diff = tools.seconds_between_now(data['date_add'])
+            #wait for other clients before remove
+            if diff > 3:
+                Request.removeRequest(app_id, data['led_column'], data['row'])
+    # manage reset requests coming from distant app
+    requests = Request.getRequests(app_id, 'reset', 'mobile')
+    if requests:
+        #soft remove   
+        for data in requests:
+            #send remove for mobile only when request come from server 
+            if (source == 'mobile' and data['client']=='server') or (source == 'server'):
+                blocks.append({'action':data['action'], 'client':data['client']})
+        # clean reset request sent            
+        if source == 'mobile':
+            Request.removeResetRequest(app_id)     
     # send events to clients
     for block in blocks:
         yield f"event: location\ndata: {block}\n\n"
@@ -57,6 +68,24 @@ async def manage_requested_positions_for_event_stream(current_device: Annotated[
     user = current_device.get('user')
     device = current_device.get('device')
     return StreamingResponse(events_generator(device['id'], source), media_type="text/event-stream")
+
+@router.post("/book/{book_id}")
+def create_request_for_book_location(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, color: Union[str, None] = None, \
+  action: Union[str, None] = 'add', client: Union[str, None] = 'mobile') -> List[Request.Request] :
+    """Get book position in current bookshelf and create requests for lighting on (action 'add') or off leds (action 'remove')"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    address = Position.getPositionForBook(device['id'], book_id)
+    if address:
+        position = []
+        now = tools.getNow()
+        dateTime = now.strftime("%Y-%m-%d %H:%M:%S")        
+        Request.newRequest(device['id'], book_id, address['row'], address['position'], address['range'], \
+         address['led_column'], 'book', client, action, dateTime, None, color)
+        position.append({'action':action, 'row':address['row'], 'start':address['led_column'], \
+            'interval':address['range'], 'nodes': [book_id], 'borrowed':address['borrowed'], \
+            'color':color, 'date_add':dateTime})
+        return position
 
 @router.post("/tag/{tag_id}")
 def create_request_for_tag_location(current_device: Annotated[str, Depends(get_auth_device)], tag_id: int, action: Union[str, None] = 'add', \
@@ -96,19 +125,9 @@ def create_request_for_tag_location(current_device: Annotated[str, Depends(get_a
     blocks = tools.buildBlockPosition(positions, action)
     return blocks
 
-@router.post("/book/{book_id}")
-def create_request_for_book_location(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, color: Union[str, None] = None, \
-  action: Union[str, None] = 'add', client: Union[str, None] = 'mobile') -> List[Request.Request] :
-    """Get book position in current bookshelf and create requests for lighting on (action 'add') or off leds (action 'remove')"""
-    user = current_device.get('user')
+@router.put("/reset")
+def update_requests_for_reset(current_device: Annotated[str, Depends(get_auth_device)]):
+    """Force reset all requests for current device : event stream will delete all remaining requests"""
     device = current_device.get('device')
-    address = Position.getPositionForBook(device['id'], book_id)
-    if address:
-        position = []
-        now = tools.getNow()
-        dateTime = now.strftime("%Y-%m-%d %H:%M:%S")        
-        Request.newRequest(device['id'], book_id, address['row'], address['position'], address['range'], address['led_column'], \
-            'book', client, action, dateTime, None, color)
-        position.append({'action':action, 'row':address['row'], 'start':address['led_column'], 'interval':address['range'], \
-        'nodes': [book_id], 'borrowed':address['borrowed'], 'color':color, 'date_add':dateTime})
-        return position
+    Request.setRequestForRemove(device['id'])
+    return {"status": "ok"}
