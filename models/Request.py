@@ -41,13 +41,25 @@ def newRequest(app_id, node_id, row, column, interval, led_column, node_type, cl
 def getRequests(app_id, action, source = None):
   '''for requests coming from mobile, we don't need to send location generated on mobile : events are already sent to device'''  
   where = ''
+  if action == 'add':
+    where += " and `sent`=0"
   if source == 'mobile':
-    where = " and `sent`=0 and `client`='server'"
+    where += " and `client`='server'"
   mydb = getMyDB()
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT * FROM biblio_request where id_app=%s and `action`=%s" + where, (app_id, action))
   #print(cursor._executed)
   return cursor.fetchall()
+
+def getRequestForTag(app_id, tag_id) :
+  mydb = getMyDB()
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT count(*) as nb_requests FROM biblio_request where id_app=%s and `id_tag`=%s \
+    and `action`='add'", (app_id, tag_id))
+  row = cursor.fetchone()
+  if row['nb_requests'] > 0:
+    return row
+  return False 
 
 def setRequestSent(app_id, node_id, sent) :
   mydb = getMyDB()

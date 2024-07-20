@@ -1,20 +1,37 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from typing import Annotated, List, Union
 from asyncio import sleep
-from models import Book, Position, Request
+from models import Book, Device, Position, Request, Token
 from dependencies import get_auth_device
 import tools
 
 router = APIRouter(
     prefix="/requests",
     tags=["Requests"],
-    dependencies=[Depends(get_auth_device)],
+    #dependencies=[Depends(get_auth_device)],
     responses={404: {"description": "Not found"}},
 )
 
 '''used when no color is customized : blue'''
 color_default = '51, 102, 255'
+
+def auth_device_token(uuid: str, device_token: str):
+    """For Event source, verify that uuid has a valid session"""
+    token_decode = Token.verify_device_token('guest', device_token)
+    uuid_decode = tools.uuidDecode(uuid)
+    if token_decode is False:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    if uuid_decode != token_decode:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid device"
+        )
+    device = Device.getDeviceForUuid(uuid_decode)
+    return device
 
 async def events_generator(app_id, source):
     # get requests data for turning on leds on device
@@ -24,8 +41,8 @@ async def events_generator(app_id, source):
         data_to_add.append({'action':data['action'], 'row':data['row'], \
         'led_column':data['led_column'], 'interval':data['range'], 'id_tag':data['id_tag'], \
         'color':data['color'], 'id_node':data['id_node'], 'client':data['client'], 'date_add':data['date_add']})
-        if source == 'mobile':
-            Request.setRequestSent(app_id, data['id_node'], 1)
+        #if source == 'mobile':
+        Request.setRequestSent(app_id, data['id_node'], 1)
     data_to_add.sort(key=tools.sortPositions)
     blocks = tools.buildBlockPosition(data_to_add, 'add')
     # remove data request when leds are turned off from device
@@ -63,10 +80,8 @@ async def events_generator(app_id, source):
         await sleep(.5)
 
 @router.get("/events/{source}")
-async def manage_requested_positions_for_event_stream(current_device: Annotated[str, Depends(get_auth_device)], source: str = 'mobile'):
+async def manage_requested_positions_for_event_stream(device: Annotated[str, Depends(auth_device_token)], uuid: str, device_token: str, source: str = 'mobile'):
     """Used with SSE: check if request is sent to device, turn on light, and then remove request if leds are turned off"""
-    user = current_device.get('user')
-    device = current_device.get('device')
     return StreamingResponse(events_generator(device['id'], source), media_type="text/event-stream")
 
 @router.post("/book/{book_id}")
