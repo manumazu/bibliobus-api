@@ -1,6 +1,6 @@
 from fastapi import Path, HTTPException
 from typing import Union, Annotated, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from db import getMyDB
 from models import Book, Position
 import tools
@@ -25,6 +25,10 @@ class Request(BaseModel):
   action: Annotated[str, Path(title="'add','remove','reset'")]
   client: Annotated[str, Path(title="'server','mobile'")]
   borrowed: Union[bool, None] = False
+
+class EventRequests(BaseModel):
+  event: Annotated[Union[str, None], Path(title="Envent Type")] = Field(examples=["location"])
+  data: Union[Request, None] = None
 
 #{'action': 'add', 'row': 1, 'index': 0, 'start': 7, 'id_tag': 1, 'color': '51, 102, 255', 'interval': 2, 'nodes': [1], 'client': 'server'}, 
 

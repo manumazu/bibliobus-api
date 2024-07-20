@@ -51,7 +51,7 @@ async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth
     return {"shelf_name": device['arduino_name'], "stored_books":elements}
 
 @router.get("/authors")
-async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]):
+async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]) -> Book.ListAuthors:
     """Get authors tags for current bookshelf"""
     device = current_device.get('device')
     user = current_device.get('user')    

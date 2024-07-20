@@ -1,6 +1,6 @@
 from fastapi import Path
-from typing import Union, Annotated
-from pydantic import BaseModel
+from typing import Union, Annotated, List
+from pydantic import BaseModel, Field
 from db import getMyDB
 import tools
 
@@ -18,6 +18,21 @@ class Book(BaseModel):
     reference: Union[str, None] = None
     description: Union[str, None] = None
     width: Annotated[Union[int, None], Path(title="Book width in millimeter", gte=10)] = None
+
+class Tag(BaseModel):
+    id: Annotated[Union[int, None], Path(title="Tag Id")] = Field(examples=["1"])
+    tag: Annotated[Union[str, None], Path(title="Tag label")] = Field(examples=["Auster Paul"])
+    nbnode: Annotated[Union[int, None], Path(title="Nb items related")] = Field(examples=["10"])
+    url: Annotated[Union[str, None], Path(title="Url for tag locations")] = Field(examples=["/requests/tag/1"])
+    hasRequest: Annotated[Union[bool, None], Path(title="If tag have items requested")] = Field(examples=["{nb_requests: 5}"])
+
+class TagElement(BaseModel):
+    initial: Annotated[Union[str, None], Path(title="Author's name initial")] = Field(examples=["a"])
+    items: List[Tag]
+
+class ListAuthors(BaseModel):
+    list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
+    elements: List[TagElement]
 
 async def getBooksForShelf(numshelf, device):
     ''' Get list of books order by positions '''

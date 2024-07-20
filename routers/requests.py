@@ -80,7 +80,7 @@ async def events_generator(app_id, source):
         await sleep(.5)
 
 @router.get("/events/{source}")
-async def manage_requested_positions_for_event_stream(device: Annotated[str, Depends(auth_device_token)], uuid: str, device_token: str, source: str = 'mobile'):
+async def manage_requested_positions_for_event_stream(device: Annotated[str, Depends(auth_device_token)], uuid: str, device_token: str, source: str = 'mobile') -> Request.EventRequests:
     """Used with SSE: check if request is sent to device, turn on light, and then remove request if leds are turned off"""
     return StreamingResponse(events_generator(device['id'], source), media_type="text/event-stream")
 
