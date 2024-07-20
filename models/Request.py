@@ -60,10 +60,7 @@ def getRequestForTag(app_id, tag_id) :
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT count(*) as nb_requests FROM biblio_request where id_app=%s and `id_tag`=%s \
     and `action`='add'", (app_id, tag_id))
-  row = cursor.fetchone()
-  if row['nb_requests'] > 0:
-    return row
-  return False 
+  return cursor.fetchone()
 
 def setRequestSent(app_id, node_id, sent) :
   mydb = getMyDB()

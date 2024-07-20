@@ -18,52 +18,78 @@ class Book(BaseModel):
     reference: Union[str, None] = None
     description: Union[str, None] = None
     width: Annotated[Union[int, None], Path(title="Book width in millimeter", gte=10)] = None
+    borrowed: Union[bool, None] = False
+    requested: Union[bool, None] = False
+    url: Union[str, None] = None
 
 class Tag(BaseModel):
     id: Annotated[Union[int, None], Path(title="Tag Id")] = Field(examples=["1"])
-    tag: Annotated[Union[str, None], Path(title="Tag label")] = Field(examples=["Auster Paul"])
+    tag: Annotated[Union[str, None], Path(title="Tag label")] = Field(examples=["Auster Paul, Biographies"])
     nbnode: Annotated[Union[int, None], Path(title="Nb items related")] = Field(examples=["10"])
     url: Annotated[Union[str, None], Path(title="Url for tag locations")] = Field(examples=["/requests/tag/1"])
-    hasRequest: Annotated[Union[bool, None], Path(title="If tag have items requested")] = Field(examples=["{nb_requests: 5}"])
+    hasRequest: Annotated[Union[int, None], Path(title="If tag have items requested")] = Field(default=0, examples=["5"])
+    color: Annotated[Union[str, None], Path(title="Leds Color RGB")] = Field(default=None, examples=["0,86,125"])
+    red: Annotated[Union[str, None], Path(title="Red Color value")] = Field(default=None, examples=["0"])
+    green: Annotated[Union[str, None], Path(title="Green Color value")] = Field(default=None, examples=["86"])
+    blue: Annotated[Union[str, None], Path(title="Blue Color value")] = Field(default=None, examples=["125"])
 
-class TagElement(BaseModel):
+class TagElementAuthor(BaseModel):
     initial: Annotated[Union[str, None], Path(title="Author's name initial")] = Field(examples=["a"])
     items: List[Tag]
 
-class ListAuthors(BaseModel):
+class TagListAuthors(BaseModel):
     list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
-    elements: List[TagElement]
+    elements: List[TagElementAuthor]
 
-async def getBooksForShelf(numshelf, device):
+class TagListCategories(BaseModel):
+    list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
+    elements: List[Tag]    
+
+class shelfLedColum(BaseModel):
+    led_column: int
+    book: Book
+
+class shelfStats(BaseModel):
+    nbbooks: int
+    positionRate: int
+
+class shelfElement(BaseModel):
+    numshelf: int
+    items: List[shelfLedColum] 
+    stats: shelfStats
+
+class BookShelf(BaseModel):
+    list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
+    books: List[shelfElement]
+
+
+async def getBooksForShelf(numshelf, device, user):
     ''' Get list of books order by positions '''
     shelfs = range(1,device['nb_lines']+1)
     if numshelf:
         shelfs = [numshelf]
-    elements = {}
-    stats = {}
-    statics = {}
+    elements = []
     for shelf in shelfs:
+        item_list = []
         books = getBooksForRow(device['id'], shelf)
-        statics[shelf] = getStaticPositions(device['id'], shelf)   
-        if books:
-            statBooks = statsBooks(device['id'], shelf)
-            statPositions = statsPositions(device['id'], shelf)
-            positionRate = 0
-            if statPositions['totpos'] != None:
-                positionRate = round((statPositions['totpos']/device['nb_cols'])*100)
-            stats[shelf] = {'nbbooks':statBooks['nbbooks'], 'positionRate':positionRate}        
+        if books:    
             element = {}
-            for row in books:     
-                element[row['led_column']] = {'item_type':row['item_type'],'id':row['id'], \
-                'title':row['title'], 'author':row['author'], 'position':row['position'], 'range':row['range'], \
-                'borrowed':row['borrowed'], 'url':'/book/'+str(row['id'])}
-                requested = getRequestForPosition(device['id'], row['position'], shelf) #get requested elements from server (mobile will be set via SSE)
+            for row in books:
+                book = getBook(row['id'], user['id'])
+                book.update({'url':'/books/item/'+str(row['id']), 'borrowed':row['borrowed']})
+                requested = getRequestForPosition(device['id'], row['position'], shelf)
                 if requested:
-                    element[row['led_column']]['requested']=True
-            if statics[shelf]:
-                for static in statics[shelf]:
-                    element[static['led_column']] = {'item_type':static['item_type'],'id':None, 'position':static['position']}
-            elements[shelf] = sorted(element.items())
+                    book.update({'requested': True})
+                #print(book)
+                item_list.append({'led_column': row['led_column'], 'book': book})
+        # get stats elements for shelf
+        statBooks = statsBooks(device['id'], shelf)
+        statPositions = statsPositions(device['id'], shelf)
+        positionRate = 0
+        if statPositions['totpos'] != None:
+            positionRate = round((statPositions['totpos']/device['nb_cols'])*100)
+        stats = {'nbbooks':statBooks['nbbooks'], 'positionRate':positionRate}            
+        elements.append({'numshelf': shelf, 'items': item_list, 'stats': stats})
     return elements   
 
 def getBook(book_id, user_id):

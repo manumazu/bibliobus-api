@@ -43,15 +43,15 @@ def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], b
     return book    
 
 @router.get("/shelf")
-async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: Union[int, None] = None):
+async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: Union[int, None] = None) -> Book.BookShelf:
     """Get books list for current connected device"""
     device = current_device.get('device')
     user = current_device.get('user')
-    elements = await Book.getBooksForShelf(numshelf, device)
-    return {"shelf_name": device['arduino_name'], "stored_books":elements}
+    elements = await Book.getBooksForShelf(numshelf, device, user)
+    return {"list_title": device['arduino_name'], "books":elements}
 
 @router.get("/authors")
-async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]) -> Book.ListAuthors:
+async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]) -> Book.TagListAuthors:
     """Get authors tags for current bookshelf"""
     device = current_device.get('device')
     user = current_device.get('user')    
@@ -66,12 +66,12 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
             for j in range(len(items)):
                 items[j]['url'] = f"/requests/tag/{items[j]['id']}"
                 hasRequest = Request.getRequestForTag(device['id'], items[j]['id'])
-                items[j]['hasRequest'] = hasRequest
+                items[j]['hasRequest'] = hasRequest['nb_requests']
         data['elements'].append({'initial':alphabet[i],'items':items})
     return data
 
 @router.get("/categories")
-async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]):
+async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(get_auth_device)]) -> Book.TagListCategories:
     device = current_device.get('device')
     user = current_device.get('user')    
     categories = await Book.getCategoriesForApp(user['id'], device['id'])
@@ -81,11 +81,12 @@ async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(ge
         for i in range(len(categories)):
             hasRequest = Request.getRequestForTag(device['id'], categories[i]['id'])
             categories[i]['url'] = f"/requests/tag/{categories[i]['id']}"
-            categories[i]['hasRequest'] = hasRequest
+            categories[i]['hasRequest'] = hasRequest['nb_requests']
             if categories[i]['color'] is not None:
                 colors = categories[i]['color'].split(",")
                 categories[i]['red'] = colors[0]
                 categories[i]['green'] = colors[1]
                 categories[i]['blue'] = colors[2]
         data['elements']=categories
+        #print(data)
         return data
