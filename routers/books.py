@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, List, Union
-from models import Book, Position
+from models import Book, Position, Request
 from dependencies import get_auth_device
 import tools
 
@@ -65,7 +65,7 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
             '''set url for authenticate requesting location from app'''
             for j in range(len(items)):
                 items[j]['url'] = f"/requests/tag/{items[j]['id']}"
-                hasRequest = False #db.get_request_for_tag(session['app_id'], items[j]['id'])
+                hasRequest = Request.getRequestForTag(device['id'], items[j]['id'])
                 items[j]['hasRequest'] = hasRequest
         data['elements'].append({'initial':alphabet[i],'items':items})
     return data
@@ -79,7 +79,7 @@ async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(ge
     data['list_title'] = device['arduino_name']
     if categories:
         for i in range(len(categories)):
-            hasRequest = False #db.get_request_for_tag(session['app_id'], categories[i]['id'])
+            hasRequest = Request.getRequestForTag(device['id'], categories[i]['id'])
             categories[i]['url'] = f"/requests/tag/{categories[i]['id']}"
             categories[i]['hasRequest'] = hasRequest
             if categories[i]['color'] is not None:
