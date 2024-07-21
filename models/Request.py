@@ -62,6 +62,13 @@ def getRequestForTag(app_id, tag_id) :
     and `action`='add'", (app_id, tag_id))
   return cursor.fetchone()
 
+def getRequestForPosition(app_id, position, row) :
+  mydb = getMyDB()
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT * FROM biblio_request where id_app=%s and `column`=%s and `row`=%s \
+    and `action`='add'", (app_id, position, row))
+  return cursor.fetchone()
+
 def setRequestSent(app_id, node_id, sent) :
   mydb = getMyDB()
   cursor = mydb.cursor()
