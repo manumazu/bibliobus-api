@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from typing import Annotated, List, Union
 from asyncio import sleep
-from models import Book, Device, Position, Request, Token
+from models import Book, Device, Position, Request, Tag, Token
 from dependencies import get_auth_device
 import tools
 
@@ -97,9 +97,9 @@ def create_request_for_book_location(current_device: Annotated[str, Depends(get_
         dateTime = now.strftime("%Y-%m-%d %H:%M:%S")        
         Request.newRequest(device['id'], book_id, address['row'], address['position'], address['range'], \
          address['led_column'], 'book', client, action, dateTime, None, color)
-        position.append({'action':action, 'row':address['row'], 'start':address['led_column'], \
+        position.append({'action':action, 'row':address['row'], 'index': address['position'], 'start':address['led_column'], \
             'interval':address['range'], 'nodes': [book_id], 'borrowed':address['borrowed'], \
-            'color':color, 'date_add':dateTime})
+            'color':color, 'client':client, 'date_add':dateTime})
         return position
 
 @router.post("/tag/{tag_id}")
@@ -108,8 +108,8 @@ def create_request_for_tag_location(current_device: Annotated[str, Depends(get_a
     """Get books position for tags in current bookshelf and create requests for lighting on (action 'add') or off leds (action 'remove')"""
     user = current_device.get('user')
     device = current_device.get('device')
-    nodes = Book.getBooksForTag(tag_id, device['id'])
-    tag = Book.getTagById(tag_id, user['id'])
+    nodes = Tag.getBooksForTag(tag_id, device['id'])
+    tag = Tag.getTagById(tag_id, user['id'])
 
     if tag['color'] is not None:
       colors = tag['color'].split(",")
