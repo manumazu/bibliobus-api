@@ -2,6 +2,7 @@ from fastapi import Path
 from typing import Union, Annotated, List
 from pydantic import BaseModel, Field
 from db import getMyDB
+from models import Book, Position
 import tools
 
 class Tag(BaseModel):
@@ -25,7 +26,16 @@ class TagListAuthors(BaseModel):
 
 class TagListCategories(BaseModel):
     list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
-    elements: List[Tag]    
+    elements: List[Tag]
+
+class TagBooksListElements(BaseModel):
+    book: Book.Book
+    address: Position.Position
+    color: Annotated[Union[str, None], Path(title="Leds Color RGB")] = Field(default=None, examples=["0,86,125"])
+
+class TagBooksList(BaseModel):
+    list_title: Annotated[Union[str, None], Path(title="Tag name")] = Field(examples=["Auster Paul"])
+    elements: List[TagBooksListElements]
 
 def setTagsBook(book, user_id, app_id, tags = None):
     # manage tags + taxonomy

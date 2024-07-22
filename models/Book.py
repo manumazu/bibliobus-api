@@ -2,6 +2,7 @@ from fastapi import Path
 from typing import Union, Annotated, List
 from pydantic import BaseModel, Field
 from db import getMyDB
+from models import Request
 import tools
 
 class Book(BaseModel):
@@ -54,7 +55,7 @@ async def getBooksForShelf(numshelf, device, user):
             for row in books:
                 book = getBook(row['id'], user['id'])
                 book.update({'url':'/books/item/'+str(row['id']), 'borrowed':row['borrowed']})
-                requested = getRequestForPosition(device['id'], row['position'], shelf)
+                requested = Request.getRequestForPosition(device['id'], row['position'], shelf)
                 if requested:
                     book.update({'requested': True})
                 #print(book)
@@ -131,13 +132,6 @@ def statsPositions(app_id, numrow):
     cursor.execute("SELECT bp.`row`, sum(bp.range) as totpos FROM biblio_position bp \
         inner join biblio_app app on bp.id_app=app.id \
         where app.id=%s and bp.`row`=%s", (app_id, numrow))#item_type='book' and inner join biblio_book bb on bb.id=bp.id_item \ 
-    return cursor.fetchone()
-
-def getRequestForPosition(app_id, position, numrow):
-    mydb = getMyDB()
-    cursor = mydb.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM biblio_request where id_app=%s and `column`=%s and `row`=%s \
-    and `action`='add'", (app_id, position, numrow))
     return cursor.fetchone()
 
 async def getAuthorsForApp(app_id, letter):

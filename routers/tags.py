@@ -12,7 +12,7 @@ router = APIRouter(
 )
 
 @router.get("/books/{tag_id}")
-async def get_books_for_tag(current_device: Annotated[str, Depends(get_auth_device)], tag_id: int):
+async def get_books_for_tag(current_device: Annotated[str, Depends(get_auth_device)], tag_id: int) -> Tag.TagBooksList:
     """Get books list for given tag"""
     device = current_device.get('device')
     user = current_device.get('user')
@@ -21,23 +21,17 @@ async def get_books_for_tag(current_device: Annotated[str, Depends(get_auth_devi
     if not nodes:
         raise HTTPException(status_code=404)
     data = {}
-    data['list_title'] = device['arduino_name']
+    data['list_title'] = tag['tag']
     books = []
     for i in range(len(nodes)):
         book = Book.getBook(nodes[i]['id_node'], user['id'])
-        books.append({'book':book})
-        app_modules = Device.getDevicesForUser(user['id'])
-        for module in app_modules:
-            address = Position.getPositionForBook(module['id'], book['id'])
-            if address:
-                hasRequest = Request.getRequestForPosition(module['id'], address['position'], address['row'])
-                books[i]['address'] = address
-                books[i]['device'] = {'arduino_name': module['arduino_name'], 'uuid_encode': tools.uuidEncode(module['id_ble']), \
-                    'app_id': module['id'], 'app_uuid': module['uuid'], 'app_mac': module['mac']}
-                books[i]['hasRequest'] = hasRequest
-                if tag['color'] is not None:
-                    books[i]['color'] = tag['color']
-        data['elements'] = books            
+        address = Position.getPositionForBook(device['id'], book['id'])
+        if address:
+            requested = Request.getRequestForPosition(device['id'], address['position'], address['row'])
+            if requested:
+                book.update({'requested': True})
+            books.append({'book':book, 'address':address, 'color':tag['color']})
+    data['elements'] = books        
     return data
 
 @router.get("/authors")
