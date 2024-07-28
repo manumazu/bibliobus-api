@@ -2,7 +2,7 @@ from fastapi import Path
 from typing import Union, Annotated, List
 from pydantic import BaseModel, Field
 from db import getMyDB
-from models import Request
+from models import Position, Request
 import tools
 
 class Book(BaseModel):
@@ -23,7 +23,12 @@ class Book(BaseModel):
     requested: Union[bool, None] = False
     url: Union[str, None] = None
 
-class shelfLedColum(BaseModel):
+class BookItem(BaseModel):
+    book: Book
+    categories: Union[List[str], None] = None
+    address: Union[Position.Position, None] = None
+
+class shelfContent(BaseModel):
     led_column: int
     book: Book
 
@@ -33,7 +38,7 @@ class shelfStats(BaseModel):
 
 class shelfElement(BaseModel):
     numshelf: int
-    items: List[shelfLedColum] 
+    items: List[shelfContent] 
     stats: shelfStats
 
 class BookShelf(BaseModel):

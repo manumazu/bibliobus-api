@@ -12,13 +12,23 @@ router = APIRouter(
 )
 
 @router.get("/item/{book_id}")
-async def get_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Book.Book:
+async def get_book_item(current_device: Annotated[str, Depends(get_auth_device)], book_id: int) -> Book.BookItem:
     """Get book for device bookshelf"""
+    device = current_device.get('device')
     user = current_device.get('user')
-    book = Book.getBook(book_id, user['id'])
-    if not book:
+    item = {}
+    item['book'] = Book.getBook(book_id, user['id'])
+    if not item:
         raise HTTPException(status_code=404)
-    return book
+    item['categories'] = []
+    tags = Tag.getTagForNode(book_id, 1)
+    if tags:
+        for i in range(len(tags)):
+            item['categories'].append(tags[i]['tag'])        
+    address = Position.getPositionForBook(device['id'], book_id)
+    if address:
+        item['address'] = address
+    return item
 
 @router.post("/item")
 def create_book_item(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book):

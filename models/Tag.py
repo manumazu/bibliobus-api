@@ -103,6 +103,13 @@ def getTagById(tag_id, user_id):
         WHERE id=%s", (user_id, tag_id))
     return cursor.fetchone()
 
+def getTagForNode(id_node, id_taxonomy):
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT id, tag FROM biblio_tags bt \
+    INNER JOIN biblio_tag_node btn ON bt.id = btn.id_tag WHERE btn.id_node=%s and bt.id_taxonomy=%s", (id_node,id_taxonomy))
+    return cursor.fetchall()    
+
 def getBooksForTag(id_tag, id_app):
     mydb = getMyDB()
     cursor = mydb.cursor(dictionary=True)
