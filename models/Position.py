@@ -149,14 +149,14 @@ def getPositionForBook(app_id, book_id, all_apps = False):
   return cursor.fetchone()
 
 ''' save or update item position '''
-def setPosition(app_id, item_id, position, row, interval, item_type, led_column, shift_position = 0):
+def setPosition(app_id, item_id, position, row, interval, item_type, led_column, shift_position = 0, borrowed = 0):
   mydb = getMyDB()
   cursor = mydb.cursor()
-  cursor.execute("INSERT INTO biblio_position (`id_app`, `id_item`, `item_type`, \
-      `position`, `row`, `range`, `led_column`, `shiftpos`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY \
-      UPDATE position=%s, row=%s, `range`=%s, `led_column`=%s, `shiftpos`=%s", \
-      (app_id, item_id, item_type, position, row, interval, led_column, shift_position, \
-        position, row, interval, led_column, shift_position))
+  cursor.execute("INSERT INTO biblio_position (`id_app`, `id_item`, `item_type`, `position`, `row`, \
+      `range`, `led_column`, `shiftpos`, `borrowed`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) \
+      ON DUPLICATE KEY UPDATE position=%s, row=%s, `range`=%s, `led_column`=%s, `shiftpos`=%s, `borrowed`=%s", \
+      (app_id, item_id, item_type, position, row, interval, led_column, shift_position, borrowed, position, row, interval, \
+        led_column, shift_position, borrowed))
   mydb.commit()
   #udpate app for book item
   if item_type == 'book':

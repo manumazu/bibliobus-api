@@ -30,6 +30,18 @@ async def create_position_for_item(current_device: Annotated[str, Depends(get_au
     position = Position.newPositionForBook(device, book_id, positionDict)
     return position
 
+@router.put("/item")
+async def update_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position) -> Position.Position:
+    """update position for book : be carefull, this is not for changing led position"""
+    user = current_device.get('user')
+    device = current_device.get('device')
+    positionDict = item.dict()
+    book_id = positionDict['id_item']
+    Position.setPosition(device['id'], book_id, positionDict['position'], positionDict['row'], \
+     positionDict['range'], 'book', positionDict['led_column'], 0, positionDict['borrowed'])
+    position = Position.getPositionForBook(device['id'], book_id)
+    return position
+
 @router.delete("/item")
 async def delete_position_for_item(current_device: Annotated[str, Depends(get_auth_device)], item: Position.Position):
     """delete position for given book"""
