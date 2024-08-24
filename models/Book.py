@@ -45,6 +45,9 @@ class BookShelf(BaseModel):
     list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
     books: List[shelfElement]
 
+class BookSearch(BaseModel):
+    list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
+    items: List[shelfContent]   
 
 async def getBooksForShelf(numshelf, device, user):
     ''' Get list of books order by positions '''
@@ -53,18 +56,10 @@ async def getBooksForShelf(numshelf, device, user):
         shelfs = [numshelf]
     elements = []
     for shelf in shelfs:
-        item_list = []
+        items = []
         books = getBooksForRow(device['id'], shelf)
-        if books:    
-            element = {}
-            for row in books:
-                book = getBook(row['id'], user['id'])
-                book.update({'url':'/books/item/'+str(row['id']), 'borrowed':row['borrowed']})
-                requested = Request.getRequestForPosition(device['id'], row['position'], shelf)
-                if requested:
-                    book.update({'requested': True})
-                #print(book)
-                item_list.append({'led_column': row['led_column'], 'book': book})
+        if books:
+            items = formatBookList(books, user['id'], device['id'])
         # get stats elements for shelf
         statBooks = statsBooks(device['id'], shelf)
         statPositions = statsPositions(device['id'], shelf)
@@ -72,8 +67,32 @@ async def getBooksForShelf(numshelf, device, user):
         if statPositions['totpos'] != None:
             positionRate = round((statPositions['totpos']/device['nb_cols'])*100)
         stats = {'nbbooks':statBooks['nbbooks'], 'positionRate':positionRate}            
-        elements.append({'numshelf': shelf, 'items': item_list, 'stats': stats})
-    return elements   
+        elements.append({'numshelf': shelf, 'items': items, 'stats': stats})
+    return elements
+
+async def getSearchResults(app_id, user_id, query):
+    items = []
+    if len(query) > 2:
+        results = searchBook(app_id, query)
+    if results:
+        items = formatBookList(results, user_id, app_id)
+    return items
+
+def formatBookList(books, user_id, app_id):
+    items = []
+    for element in books:
+        book = getBook(element['id'], user_id)
+        # merge position for element if needed
+        if 'position' not in element:
+            position = Position.getPositionForBook(app_id, element['id'])
+            element.update(position)
+        book.update({'url':'/books/item/'+str(element['id']), 'borrowed':element['borrowed']})
+        requested = Request.getRequestForPosition(app_id, element['position'], element['row'])
+        if requested:
+            book.update({'requested': True})
+        #print(book)
+        items.append({'led_column': element['led_column'], 'book': book})
+    return items
 
 def getBook(book_id, user_id):
     mydb = getMyDB()
@@ -166,3 +185,11 @@ def updateAppBook(app_id, item_id) :
   cursor = mydb.cursor()
   cursor.execute("UPDATE biblio_book SET id_app=%s WHERE id=%s", (app_id, item_id))
   mydb.commit()
+
+def searchBook(app_id, keyword) :
+  searchTerm = "%"+keyword+"%"
+  mydb = getMyDB()
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT * FROM biblio_search where id_app=%s and \
+    (author like %s or title like %s or tags like %s)", (app_id, searchTerm, searchTerm, searchTerm))
+  return cursor.fetchall()

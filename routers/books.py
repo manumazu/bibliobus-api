@@ -50,7 +50,18 @@ def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], b
     book = Book.updateBook(bookDict, book_id, user['id'], device['id'])
     # save tags
     Tag.setTagsBook(book, user_id, device['id'], None)
-    return book    
+    return book
+
+@router.post("/search")
+async def search_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], query: str) -> Book.BookSearch:
+    """Search books for current connected device"""
+    device = current_device.get('device')
+    user = current_device.get('user')
+    results = await Book.getSearchResults(device['id'], user['id'], query)    
+    list_title = str(len(results))
+    list_title += " books " if len(results) > 1 else " book "
+    list_title += "for \""+query+"\""
+    return {"list_title": list_title, "items":results}
 
 @router.get("/shelf")
 async def get_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], numshelf: Union[int, None] = None) -> Book.BookShelf:
