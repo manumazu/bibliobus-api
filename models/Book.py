@@ -47,7 +47,7 @@ class BookShelf(BaseModel):
 
 class BookSearch(BaseModel):
     list_title: Annotated[Union[str, None], Path(title="Bookshelf name")] = Field(examples=["Biblio Demo"])
-    items: List[shelfContent]   
+    items: List[BookItem]   
 
 async def getBooksForShelf(numshelf, device, user):
     ''' Get list of books order by positions '''
@@ -82,6 +82,7 @@ def formatBookList(books, user_id, app_id):
     items = []
     for element in books:
         book = getBook(element['id'], user_id)
+        position = None
         # merge position for element if needed
         if 'position' not in element:
             position = Position.getPositionForBook(app_id, element['id'])
@@ -90,8 +91,7 @@ def formatBookList(books, user_id, app_id):
         requested = Request.getRequestForPosition(app_id, element['position'], element['row'])
         if requested:
             book.update({'requested': True})
-        #print(book)
-        items.append({'led_column': element['led_column'], 'book': book})
+        items.append({'led_column': element['led_column'], 'book': book, 'address': position})
     return items
 
 def getBook(book_id, user_id):
