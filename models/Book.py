@@ -3,7 +3,7 @@ from typing import Union, Annotated, List
 from pydantic import BaseModel, Field
 from db import getMyDB
 from config import settings
-from models import Position, Request
+from models import Location, Position
 import tools
 
 class Book(BaseModel):
@@ -89,7 +89,7 @@ def formatBookList(books, user_id, app_id):
             position = Position.getPositionForBook(app_id, element['id'])
             element.update(position)
         book.update({'url':'/books/item/'+str(element['id']), 'borrowed':element['borrowed']})
-        requested = Request.getRequestForPosition(app_id, element['position'], element['row'])
+        requested = Location.getRequestForPosition(app_id, element['position'], element['row'])
         if requested:
             book.update({'requested': True})
         items.append({'led_column': element['led_column'], 'book': book, 'address': position})

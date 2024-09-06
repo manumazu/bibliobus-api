@@ -9,7 +9,7 @@ mydb = getMyDB()
 
 # biblio_app table definition
 
-class Request(BaseModel):
+class Location(BaseModel):
   #id_app: int
   #id_node: int
   nodes: List[int]
@@ -26,9 +26,9 @@ class Request(BaseModel):
   client: Annotated[str, Path(title="'server','mobile'")]
   borrowed: Union[bool, None] = False
 
-class EventRequests(BaseModel):
+class EventLocations(BaseModel):
   event: Annotated[Union[str, None], Path(title="Envent Type")] = Field(examples=["location"])
-  data: Union[Request, None] = None
+  data: Union[Location, None] = None
 
 #{'action': 'add', 'row': 1, 'index': 0, 'start': 7, 'id_tag': 1, 'color': '51, 102, 255', 'interval': 2, 'nodes': [1], 'client': 'server'}, 
 

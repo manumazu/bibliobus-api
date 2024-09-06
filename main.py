@@ -17,7 +17,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import devices, books, positions, requests, tags
+from routers import devices, books, locations, positions, tags
 
 app = FastAPI(title="Bibliobus API",
               summary="Rest API to manage item positions from and to \"Bibus\" devices",
@@ -52,7 +52,7 @@ async def root():
 
 app.include_router(books.router)
 app.include_router(devices.router)
+app.include_router(locations.router)
 app.include_router(positions.router)
-app.include_router(requests.router)
 app.include_router(tags.router)
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Annotated, List, Union
-from models import Book, Device, Position, Request, Tag
+from models import Book, Device, Location, Position, Tag
 from dependencies import get_auth_device
 import tools
 
