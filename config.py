@@ -11,5 +11,6 @@ class Settings(BaseSettings):
     db_name: str = os.getenv('DB_NAME')
     secret_key: str = os.getenv('SECRET_KEY')
     secret_key_access_token: str = os.getenv('SECRET_KEY_ACCESS_TOKEN')
+    google_book_api_key: str = os.getenv('GOOGLE_BOOK_API_KEY')
 
 settings = Settings()

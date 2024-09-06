@@ -52,9 +52,31 @@ def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], b
     Tag.setTagsBook(book, user_id, device['id'], None)
     return book
 
+@router.post("/referencer")
+def reference_books_with_api(current_device: Annotated[str, Depends(get_auth_device)], isbn: str, search_api: str) -> List[Book.Book]:
+    """Retrieve books using external API with ISBN code"""
+    device = current_device.get('device')
+    user = current_device.get('user')
+    res = []
+    '''Search books with googleapis api'''
+    if search_api=='googleapis':
+      query = "ISBN:\""+isbn+"\""
+      data = Book.searchBookApi(query, 'googleapis')
+      if 'items' in data:
+        for item in data['items']:
+          res.append(Book.formatBookApi('googleapis', item, isbn))
+    '''Search books with openlibrary api'''
+    if search_api=='openlibrary':
+        query = "ISBN:"+isbn
+        data = Book.searchBookApi(query, 'openlibrary')
+        #print(data)      
+        if query in data:
+            res = [Book.formatBookApi('openlibrary', data[query], isbn)]
+    return res
+
 @router.post("/search")
 async def search_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], query: str) -> Book.BookSearch:
-    """Search books for current connected device"""
+    """Search books fulltext for current connected device"""
     device = current_device.get('device')
     user = current_device.get('user')
     results = await Book.getSearchResults(device['id'], user['id'], query)    

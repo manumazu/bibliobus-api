@@ -2,6 +2,7 @@ from fastapi import Path
 from typing import Union, Annotated, List
 from pydantic import BaseModel, Field
 from db import getMyDB
+from config import settings
 from models import Position, Request
 import tools
 
@@ -193,3 +194,95 @@ def searchBook(app_id, keyword) :
   cursor.execute("SELECT * FROM biblio_search where id_app=%s and \
     (author like %s or title like %s or tags like %s)", (app_id, searchTerm, searchTerm, searchTerm))
   return cursor.fetchall()
+
+def searchBookApi(query, api, ref = None):
+  import requests
+  if api == 'googleapis':
+    url = "https://www.googleapis.com/books/v1/volumes?key="+settings.google_book_api_key+"&q="
+  if api == 'openlibrary':
+    url = "https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys="
+  if ref is not None:
+    url = "https://www.googleapis.com/books/v1/volumes/"
+    query = ref
+  data = {}
+  r = requests.get(url + query)
+  data = r.json()
+  return data
+
+def formatBookApi(api, data, isbn):
+  bookapi = {}
+
+  if api == 'localform':
+    authors = data.getlist('authors[]')
+    bookapi['authors'] = authors
+    authors = authors[:3]
+    bookapi['author'] = ', '.join(authors)
+    bookapi['title'] = data['title']
+    bookapi['subtitle'] = data['subtitle']
+    bookapi['reference'] = data['reference']
+    bookapi['isbn'] = isbn
+    bookapi['description'] = data['description']
+    bookapi['editor'] = data['editor']
+    bookapi['pages'] = data['pages']
+    bookapi['year'] = data['year']
+    if 'book_width' in data:
+      bookapi['width'] = data['book_width']#round(float(data['book_width'])*10)
+    else :
+      bookapi['width'] = None
+
+  # used for AI ocr results
+  if api == 'ocr':
+    bookapi['authors'] = [data['author']]
+    bookapi['title'] = data['title']
+    bookapi['editor'] = data['editor']
+    bookapi['subtitle'] = ''
+
+  if api == 'openlibrary':
+    authors = []
+    if 'authors' in data:
+      for author in data['authors']:
+        authors.append(author['name'])
+    bookapi['authors'] = authors
+    authors = authors[:3]
+    bookapi['author'] = ', '.join(authors)
+    bookapi['title'] = data['title']
+    bookapi['subtitle'] = ''
+    if 'subtitle' in data:
+      bookapi['subtitle'] = data['subtitle']
+    bookapi['reference'] = data['key']
+    bookapi['isbn'] = isbn
+    bookapi['editor'] = data['publishers'][0]['name'] if 'publishers' in data else ""
+    bookapi['description'] = data['note'] if 'note' in data else ""
+    bookapi['pages'] = data['number_of_pages'] if 'number_of_pages' in data else 1
+    bookapi['year'] = tools.getYear(data['publish_date']) if 'publish_date' in data else ""
+    
+  if api == 'googleapis':
+    authors = []
+    if 'authors' in data['volumeInfo']:
+      authors = data['volumeInfo']['authors']
+    bookapi['authors'] = authors
+    authors = authors[:3]
+    bookapi['author'] = ', '.join(authors)
+    bookapi['title'] = data['volumeInfo']['title']
+    bookapi['subtitle'] = ''
+    if 'subtitle' in data['volumeInfo']:
+      bookapi['subtitle'] = data['volumeInfo']['subtitle']
+    bookapi['reference'] = data['id']
+    bookapi['isbn'] = ''
+    if isbn is not None:
+      bookapi['isbn'] = isbn
+    else:
+      if 'industryIdentifiers' in data['volumeInfo']:
+        for Ids in data['volumeInfo']['industryIdentifiers']:
+          if Ids['type'] == "ISBN_13":
+            bookapi['isbn'] = Ids['identifier']
+    bookapi['editor'] = data['volumeInfo']['publisher'] if 'publisher' in data['volumeInfo'] else ""
+    bookapi['description'] = data['volumeInfo']['description'] if 'description' in data['volumeInfo'] else ""
+    bookapi['pages'] = data['volumeInfo']['pageCount'] if 'pageCount' in data['volumeInfo'] else 1
+    bookapi['year'] = tools.getYear(data['volumeInfo']['publishedDate']) if 'publishedDate' in data['volumeInfo'] else ""
+    if 'dimensions' in data['volumeInfo'] and 'thickness' in data['volumeInfo']['dimensions']:
+      width = data['volumeInfo']['dimensions']['thickness']
+      converter = 10 if width.find('cm') else 1 # convert dimension from cm to mm
+      bookapi['width'] = str2int(width)*converter
+
+  return bookapi

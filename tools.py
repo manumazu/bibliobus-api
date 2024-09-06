@@ -5,6 +5,25 @@ import hashlib, base64, re
 def getNow():
   return datetime.now()
 
+def getYear(datestr):
+  try:
+    datepub = datetime.strptime(datestr,'%b %d, %Y')
+    return str(datepub.year)
+  except ValueError:
+    try:
+      datepub = datetime.strptime(datestr,'%B %d, %Y')
+      return str(datepub.year)
+    except ValueError:
+      try:
+        datepub = datetime.strptime(datestr,'%Y-%m-%dT%H:%M:%S%z')
+        return str(datepub.year)
+      except ValueError: 
+        try:
+          datepub = datetime.strptime(datestr,'%Y-%m-%d')
+          return str(datepub.year)
+        except ValueError:
+          return datestr
+
 def seconds_between_now(d1):
     #d1 = datetime.strptime(str(d1), "%Y-%m-%d %H:%M:%S")
     d2 = getNow()

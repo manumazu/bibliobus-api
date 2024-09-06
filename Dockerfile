@@ -10,6 +10,7 @@ RUN pip install fastapi
 RUN pip install pydantic-settings
 RUN pip install mysql-connector-python
 RUN pip install PyJWT
+RUN pip install requests
 
 #RUN chmod +x /app/boot.sh
 #RUN ls -l /app/boot.sh
