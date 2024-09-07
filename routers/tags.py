@@ -27,7 +27,7 @@ async def get_books_for_tag(current_device: Annotated[str, Depends(get_auth_devi
         book = Book.getBook(nodes[i]['id_node'], user['id'])
         address = Position.getPositionForBook(device['id'], book['id'])
         if address:
-            requested = Request.getRequestForPosition(device['id'], address['position'], address['row'])
+            requested = Location.getRequestForPosition(device['id'], address['position'], address['row'])
             if requested:
                 book.update({'requested': True})
             books.append({'book':book, 'address':address, 'color':tag['color']})
@@ -49,7 +49,7 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
             '''set url for authenticate requesting location from app'''
             for j in range(len(items)):
                 items[j]['url'] = f"/locations/tag/{items[j]['id']}"
-                hasRequest = Request.getRequestForTag(device['id'], items[j]['id'])
+                hasRequest = Location.getRequestForTag(device['id'], items[j]['id'])
                 items[j]['hasRequest'] = hasRequest['nb_requests']
         data['elements'].append({'initial':alphabet[i],'items':items})
     return data
@@ -63,7 +63,7 @@ async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(ge
     data['list_title'] = device['arduino_name']
     if categories:
         for i in range(len(categories)):
-            hasRequest = Request.getRequestForTag(device['id'], categories[i]['id'])
+            hasRequest = Location.getRequestForTag(device['id'], categories[i]['id'])
             categories[i]['url'] = f"/locations/tag/{categories[i]['id']}"
             categories[i]['hasRequest'] = hasRequest['nb_requests']
             if categories[i]['color'] is not None:
