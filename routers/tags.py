@@ -48,7 +48,7 @@ async def get_authors_in_bookshelf(current_device: Annotated[str, Depends(get_au
         if items:
             '''set url for authenticate requesting location from app'''
             for j in range(len(items)):
-                items[j]['url'] = f"/requests/tag/{items[j]['id']}"
+                items[j]['url'] = f"/locations/tag/{items[j]['id']}"
                 hasRequest = Request.getRequestForTag(device['id'], items[j]['id'])
                 items[j]['hasRequest'] = hasRequest['nb_requests']
         data['elements'].append({'initial':alphabet[i],'items':items})
@@ -64,7 +64,7 @@ async def get_categories_for_bookshelf(current_device: Annotated[str, Depends(ge
     if categories:
         for i in range(len(categories)):
             hasRequest = Request.getRequestForTag(device['id'], categories[i]['id'])
-            categories[i]['url'] = f"/requests/tag/{categories[i]['id']}"
+            categories[i]['url'] = f"/locations/tag/{categories[i]['id']}"
             categories[i]['hasRequest'] = hasRequest['nb_requests']
             if categories[i]['color'] is not None:
                 colors = categories[i]['color'].split(",")

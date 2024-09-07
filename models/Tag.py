@@ -9,7 +9,7 @@ class Tag(BaseModel):
     id: Annotated[Union[int, None], Path(title="Tag Id")] = Field(examples=["1"])
     tag: Annotated[Union[str, None], Path(title="Tag label")] = Field(examples=["Auster Paul, Biographies"])
     nbnode: Annotated[Union[int, None], Path(title="Nb items related")] = Field(examples=["10"])
-    url: Annotated[Union[str, None], Path(title="Url for tag locations")] = Field(examples=["/requests/tag/1"])
+    url: Annotated[Union[str, None], Path(title="Url for tag locations")] = Field(examples=["/locations/tag/1"])
     hasRequest: Annotated[Union[int, None], Path(title="If tag have items requested")] = Field(default=0, examples=["5"])
     color: Annotated[Union[str, None], Path(title="Leds Color RGB")] = Field(default=None, examples=["0,86,125"])
     red: Annotated[Union[str, None], Path(title="Red Color value")] = Field(default=None, examples=["0"])
