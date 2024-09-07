@@ -52,7 +52,7 @@ def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], b
     Tag.setTagsBook(book, user_id, device['id'], None)
     return book
 
-@router.post("/referencer")
+@router.get("/referencer")
 def reference_books_with_api(current_device: Annotated[str, Depends(get_auth_device)], isbn: str, search_api: str) -> List[Book.Book]:
     """Retrieve books using external API with ISBN code"""
     device = current_device.get('device')
