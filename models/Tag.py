@@ -41,7 +41,7 @@ def setTagsBook(book, user_id, app_id, tags = None):
     # manage tags + taxonomy
     # author tags
     authorTagids = []
-    authors = [book['author']]
+    authors = book['author'].split(',')
     if len(authors) > 0:
         authorTags = tools.getLastnameFirstname(authors)
         authorTagids = saveTags(authorTags,'Authors')

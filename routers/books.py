@@ -96,7 +96,7 @@ def create_book_and_position(current_device: Annotated[str, Depends(get_auth_dev
       bookDict['width'] = round(tools.setBookWidth(bookDict['pages']))
     # save book + tags 
     book = Book.newBook(bookDict, user['id'], device['id'])
-    Tag.setTagsBook(book, user['id'], device['id'], None)     
+    Tag.setTagsBook(bookDict, user['id'], device['id'], None)     
     book_id = book['id']
     item['book'] = book
     # save position if needed
