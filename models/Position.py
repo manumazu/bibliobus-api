@@ -130,7 +130,7 @@ def getLastSavedPosition(app_id):
   cursor = mydb.cursor(dictionary=True)
   cursor.execute("SELECT * FROM `biblio_position` WHERE id_app = %s and item_type='book' and \
       position in (SELECT max(position) FROM `biblio_position` WHERE id_app = %s and item_type='book' GROUP by row) \
-      ORDER BY row DESC LIMIT 1", (id_app, id_app))
+      ORDER BY row DESC LIMIT 1", (app_id, app_id))
   return cursor.fetchone()      
 
 ''' update position order before computing books intervals sum ''' 

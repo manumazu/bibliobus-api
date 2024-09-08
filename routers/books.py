@@ -75,21 +75,30 @@ def reference_books_with_api(current_device: Annotated[str, Depends(get_auth_dev
     return res
 
 @router.post("/referencer")
-def create_book_and_position(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book, force_position: bool = False) -> Book.BookItem:
+def create_book_and_position(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book, \
+    force_position: bool = False, book_width: Union[str, None] = None) -> Book.BookItem:
     """Create new book and position for current device"""
     device = current_device.get('device')
     user = current_device.get('user')
     bookDict = item.dict()
     book_id = Book.getBookByISBN(bookDict['isbn'], bookDict['reference'], user['id'])
+    # save book if not present     
     if book_id:
         raise HTTPException(
             status_code=400,
-            detail=f"A book already exists with id {book_id}"
+            detail=f"A book already exists with id {book_id['id']}"
         )
-    # save book if not present
+    item = {}      
+    # force width if not found or not set        
+    if book_width is not None:
+      bookDict['width'] = round(float(book_width))
+    elif bookDict['width'] is None:
+      bookDict['width'] = round(tools.setBookWidth(bookDict['pages']))
+    # save book + tags 
     book = Book.newBook(bookDict, user['id'], device['id'])
-    Tag.setTagsBook(book, user['id'], device['id'], None)
+    Tag.setTagsBook(book, user['id'], device['id'], None)     
     book_id = book['id']
+    item['book'] = book
     # save position if needed
     if force_position:
         lastPos = Position.getLastSavedPosition(device['id'])
@@ -105,8 +114,8 @@ def create_book_and_position(current_device: Annotated[str, Depends(get_auth_dev
         Position.setPosition(device['id'], book_id, position, row, interval, 'book', led_column)
         address = Position.getPositionForBook(device['id'], book_id)
         if address:
-            book['address'] = address
-    return book
+            item['address'] = address
+    return item
 
 @router.post("/search")
 async def search_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], query: str) -> Book.BookSearch:

@@ -73,6 +73,20 @@ def setBookInterval(book, leds_interval):
       lrange = round(int(nb_pages)/200)
   return lrange
 
+def setBookWidth(pages):
+  # use scale 120 pages for 1 cm 
+  if pages <= 350:
+    cm = pages/120
+  # use scale 200 pages for 1 cm 
+  elif pages > 350 and pages <= 500:
+    cm = pages/200
+  # use scale 350 pages for 1 cm 
+  elif pages > 500:
+    cm = pages/350
+  if cm < 1:
+    cm = 1
+  return round(float(cm),2)*10
+
 def sortIndexBlocks(elem):
   return elem['index']
 
