@@ -54,7 +54,7 @@ def update_book_item(current_device: Annotated[str, Depends(get_auth_device)], b
 
 @router.get("/referencer")
 def reference_books_with_api(current_device: Annotated[str, Depends(get_auth_device)], isbn: str, search_api: str) -> List[Book.Book]:
-    """Retrieve books using external API with ISBN code"""
+    """Retrieve books references using external API with ISBN code"""
     device = current_device.get('device')
     user = current_device.get('user')
     res = []
@@ -73,6 +73,40 @@ def reference_books_with_api(current_device: Annotated[str, Depends(get_auth_dev
         if query in data:
             res = [Book.formatBookApi('openlibrary', data[query], isbn)]
     return res
+
+@router.post("/referencer")
+def create_book_and_position(current_device: Annotated[str, Depends(get_auth_device)], item: Book.Book, force_position: bool = False) -> Book.BookItem:
+    """Create new book and position for current device"""
+    device = current_device.get('device')
+    user = current_device.get('user')
+    bookDict = item.dict()
+    book_id = Book.getBookByISBN(bookDict['isbn'], bookDict['reference'], user['id'])
+    if book_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A book already exists with id {book_id}"
+        )
+    # save book if not present
+    book = Book.newBook(bookDict, user['id'], device['id'])
+    Tag.setTagsBook(book, user['id'], device['id'], None)
+    book_id = book['id']
+    # save position if needed
+    if force_position:
+        lastPos = Position.getLastSavedPosition(device['id'])
+        interval = tools.setBookInterval(book, device['leds_interval'])       
+        if lastPos:
+            position = lastPos['position']+1
+            row = lastPos['row']
+            led_column = lastPos['led_column']+interval
+        else:
+            position = 1
+            row = 1
+            led_column = 0
+        Position.setPosition(device['id'], book_id, position, row, interval, 'book', led_column)
+        address = Position.getPositionForBook(device['id'], book_id)
+        if address:
+            book['address'] = address
+    return book
 
 @router.post("/search")
 async def search_books_in_bookshelf(current_device: Annotated[str, Depends(get_auth_device)], query: str) -> Book.BookSearch:

@@ -23,6 +23,7 @@ class Book(BaseModel):
     borrowed: Union[bool, None] = False
     requested: Union[bool, None] = False
     url: Union[str, None] = None
+    id: int
 
 class BookItem(BaseModel):
     book: Book
@@ -100,6 +101,12 @@ def getBook(book_id, user_id):
     cursor = mydb.cursor(dictionary=True)
     cursor.execute("SELECT `id`, `isbn`, `title`, `subtitle`, `ocr_keywords` as keywords, `author`, `editor`, `year`, `pages`, \
         `reference`, `description`, `width` FROM biblio_book where id=%s and id_user=%s",(book_id, user_id))
+    return cursor.fetchone()
+
+def getBookByISBN(isbn, ref, user_id):
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM biblio_book WHERE (`isbn`=%s or `reference`=%s) and `id_user`=%s", (isbn, ref, user_id))
     return cursor.fetchone()
 
 def getBooksForRow(app_id, numrow):

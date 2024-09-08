@@ -125,6 +125,14 @@ def getPositionsForShelf(app_id, numshelf):
     and `item_type`<>'static' order by `position`", (app_id, numshelf))
   return cursor.fetchall()
 
+def getLastSavedPosition(app_id):
+  mydb = getMyDB()  
+  cursor = mydb.cursor(dictionary=True)
+  cursor.execute("SELECT * FROM `biblio_position` WHERE id_app = %s and item_type='book' and \
+      position in (SELECT max(position) FROM `biblio_position` WHERE id_app = %s and item_type='book' GROUP by row) \
+      ORDER BY row DESC LIMIT 1", (id_app, id_app))
+  return cursor.fetchone()      
+
 ''' update position order before computing books intervals sum ''' 
 def updatePositionBeforeOrder(user_id, app_id, id_book, numshelf, device, new_position, shift_position = 0):
   # find current interval for book
