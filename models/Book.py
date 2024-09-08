@@ -23,7 +23,7 @@ class Book(BaseModel):
     borrowed: Union[bool, None] = False
     requested: Union[bool, None] = False
     url: Union[str, None] = None
-    id: int
+    id: Union[int, None] = None
 
 class BookItem(BaseModel):
     book: Book
