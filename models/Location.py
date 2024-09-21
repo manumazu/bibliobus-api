@@ -102,7 +102,7 @@ def removeRequest(app_id, led_column, row) :
 def removeResetRequest(app_id) :
   mydb = getMyDB()
   cursor = mydb.cursor()
-  cursor.execute("DELETE FROM biblio_request where id_app=%s and `action`='reset'",(app_id))
+  cursor.execute("DELETE FROM biblio_request where id_app=%s and `action`='reset'",[app_id])
   mydb.commit()
 
 def setRequestForRemove(app_id) :
