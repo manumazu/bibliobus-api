@@ -1,7 +1,9 @@
 # bibliobus-api
-Rest API for [Bibliobus](https://bibliob.us) project 
+Rest API for [Bibliobus](https://bibliob.us) project
+
 This project use a [FastAPI](https://fastapi.tiangolo.com/) instance
-A demo of this project is running at https://api.bibliob.us/docs
+
+A demo of this API is running at https://api.bibliob.us/docs
 
 ## Install
 ```
