@@ -21,6 +21,7 @@ from typing import Annotated, List, Union
 from asyncio import sleep
 from models import Book, Device, Location, Position, Tag, Token
 from dependencies import get_auth_device
+import json
 import tools
 
 router = APIRouter(
@@ -58,7 +59,7 @@ async def events_generator(app_id, source):
         data_to_add.append({'action':data['action'], 'row':data['row'], \
         'led_column':data['led_column'], 'interval':data['range'], 'id_tag':data['id_tag'], \
         'color':data['color'], 'id_node':data['id_node'], 'client':data['client'], 'date_add':data['date_add']})
-        #if source == 'mobile':
+        # set as sent
         Location.setRequestSent(app_id, data['id_node'], 1)
     data_to_add.sort(key=tools.sortPositions)
     blocks = tools.buildBlockPosition(data_to_add, 'add')
@@ -88,18 +89,18 @@ async def events_generator(app_id, source):
             #send remove for mobile only when request come from server 
             if (source == 'mobile' and data['client']=='server') or (source == 'server'):
                 blocks.append({'action':data['action'], 'client':data['client']})
-        # clean reset request sent            
+        # clean reset request sent
         if source == 'mobile':
-            Location.removeResetRequest(app_id)     
-    # send events to clients
-    for block in blocks:
-        yield f"event: location\ndata: {block}\n\n"
-        await sleep(.5)
+            Location.removeResetRequest(app_id) 
+    return blocks
 
 @router.get("/events/{source}")
 async def manage_requested_positions_for_event_stream(device: Annotated[str, Depends(auth_device_token)], uuid: str, device_token: str, source: str = 'mobile') -> Location.EventLocations:
     """Used with SSE: check if location request is sent to device, turn on light, and then remove request if leds are turned off"""
-    return StreamingResponse(events_generator(device['id'], source), media_type="text/event-stream")
+    data = await events_generator(device['id'], source)
+    data = json.dumps(data, default=str)
+    msg = f"event: location\ndata: {data}\n\n"
+    return StreamingResponse(msg, media_type="text/event-stream")
 
 @router.post("/book/{book_id}")
 def create_request_for_book_location(current_device: Annotated[str, Depends(get_auth_device)], book_id: int, color: Union[str, None] = None, \

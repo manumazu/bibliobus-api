@@ -45,7 +45,7 @@ class Location(BaseModel):
 
 class EventLocations(BaseModel):
   event: Annotated[Union[str, None], Path(title="Envent Type")] = Field(examples=["location"])
-  data: Union[Location, None] = None
+  data: Union[List[Location], None] = None
 
 #{'action': 'add', 'row': 1, 'index': 0, 'start': 7, 'id_tag': 1, 'color': '51, 102, 255', 'interval': 2, 'nodes': [1], 'client': 'server'}, 
 
