@@ -1,19 +1,24 @@
 FROM python:slim
 
-#ENV DB_HOST=172.17.0.1
-
-COPY . /app
+ARG uid=1001
 
 WORKDIR /app
+
 RUN python -m pip install --upgrade pip
-RUN pip install fastapi
+RUN pip install fastapi uvicorn
 RUN pip install pydantic-settings
 RUN pip install mysql-connector-python
 RUN pip install PyJWT
 RUN pip install requests
 
-#RUN chmod +x /app/boot.sh
-#RUN ls -l /app/boot.sh
+RUN useradd bibliobus --home /app --uid ${uid} 
+
+COPY . /app
+COPY ./.env.sample /app/.env
+
+RUN chown bibliobus:bibliobus /app
+
+USER bibliobus
 
 EXPOSE 8000
 
