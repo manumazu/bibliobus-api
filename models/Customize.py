@@ -57,3 +57,12 @@ def getCustomcodes(app_id, user_id, published_only = False) :
             FROM biblio_customcode where id_user=%s and id_app=%s \
             and description='blockly workspace' order by `position`", (user_id, app_id))
     return cursor.fetchall()
+
+def getCustomcolors(app_id, user_id) :
+    mydb = getMyDB()
+    cursor = mydb.cursor(dictionary=True)
+    cursor.execute("SELECT id, title, coordinates, date_add, date_upd FROM biblio_customcolors \
+        where id_user=%s and id_app=%s", (user_id, app_id))
+    dbcoords = cursor.fetchone()
+    if(dbcoords and dbcoords['coordinates']!='' and dbcoords['coordinates']!='{}'):
+        return dbcoords

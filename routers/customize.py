@@ -36,6 +36,11 @@ async def get_codes_list(current_device: Annotated[str, Depends(get_auth_device)
     device = current_device.get('device')
     user = current_device.get('user')
     codelist = Customize.getCustomcodes(device['id'], user['id'], True)
+    if codelist is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found"
+        )     
     return {"list_title": f"Your codes for {device['arduino_name']}", "items":codelist}
 
 @router.get("/code/{code_id}")
@@ -43,7 +48,13 @@ async def get_code(current_device: Annotated[str, Depends(get_auth_device)], cod
     """Get custom code for current device"""
     device = current_device.get('device')
     user = current_device.get('user')
-    return Customize.getCustomCode(code_id, device['id'], user['id'])
+    customcode = Customize.getCustomCode(code_id, device['id'], user['id'])
+    if customcode is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found"
+        )
+    return customcode
 
 @router.get("/effects")
 async def get_native_effects(current_device: Annotated[str, Depends(get_auth_device)]) -> Customize.NativeEffects:
@@ -52,3 +63,16 @@ async def get_native_effects(current_device: Annotated[str, Depends(get_auth_dev
     user = current_device.get('user')    
     effects = [ 'rainbow', 'rainbowWithGlitter', 'confetti', 'sinelon' , 'juggle', 'bpm', 'snowSparkle', 'fadeOut' ]
     return {"list_title": f"Effects for {device['arduino_name']}", "items":effects}
+
+@router.get("/customcolors")
+async def get_custom_colors(current_device: Annotated[str, Depends(get_auth_device)]):
+    """Get customzied coords of colors for current device"""
+    device = current_device.get('device')
+    user = current_device.get('user')     
+    dbcoords = Customize.getCustomcolors(device['id'], user['id'])
+    if dbcoords is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Not found"
+        )    
+    return dbcoords['coordinates']
