@@ -55,14 +55,24 @@ async def events_generator(app_id, source):
     # get location requests data for turning on leds on device
     requests = Location.getRequests(app_id, 'add', source)
     data_to_add = []
-    for data in requests:
-        data_to_add.append({'action':data['action'], 'row':data['row'], \
-        'led_column':data['led_column'], 'interval':data['range'], 'id_tag':data['id_tag'], \
-        'color':data['color'], 'id_node':data['id_node'], 'client':data['client'], 'date_add':data['date_add']})
-        # set as sent
-        Location.setRequestSent(app_id, data['id_node'], 1)
+    blocks = []
+    for i, data in enumerate(requests):
+        #build simple requests blocks for gaming
+        if data['id_node'] == 0: 
+            blocks.append({'action':data['action'], 'row':data['row'], 'index':i, 'start':data['led_column'], \
+                'color':data['color'], 'id_tag':data['id_tag'],'interval':data['range'], 'nodes':[0], 'client':data['client']})
+        #build position array for books requests
+        else:
+            data_to_add.append({'action':data['action'], 'row':data['row'], \
+            'led_column':data['led_column'], 'interval':data['range'], 'id_tag':data['id_tag'], \
+            'color':data['color'], 'id_node':data['id_node'], 'client':data['client'], 'date_add':data['date_add']})
+        # set as sent for mobile (leds are already on)
+        if source == 'mobile':
+            Location.setRequestSent(app_id, data['id_node'], 1)
+    # group positions by block
     data_to_add.sort(key=tools.sortPositions)
-    blocks = tools.buildBlockPosition(data_to_add, 'add')
+    blocks += tools.buildBlockPosition(data_to_add, 'add')
+
     # remove data request when leds are turned off from device
     requests = Location.getRequests(app_id, 'remove')
     data_to_remove = []
@@ -81,6 +91,7 @@ async def events_generator(app_id, source):
             #wait for other clients before remove
             if diff > 3:
                 Location.removeRequest(app_id, data['led_column'], data['row'])
+
     # manage reset requests coming from distant app
     requests = Location.getRequests(app_id, 'reset', 'mobile')
     if requests:
@@ -92,6 +103,7 @@ async def events_generator(app_id, source):
         # clean reset request sent
         if source == 'mobile':
             Location.removeResetRequest(app_id) 
+
     return blocks
 
 @router.get("/events/{source}")
