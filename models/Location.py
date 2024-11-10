@@ -47,7 +47,15 @@ class EventLocations(BaseModel):
   event: Annotated[Union[str, None], Path(title="Envent Type")] = Field(examples=["location"])
   data: Union[List[Location], None] = None
 
-#{'action': 'add', 'row': 1, 'index': 0, 'start': 7, 'id_tag': 1, 'color': '51, 102, 255', 'interval': 2, 'nodes': [1], 'client': 'server'}, 
+class Position(BaseModel):
+  row: Annotated[int, Path(title="Led strip number")] = 0
+  start: Annotated[int, Path(title="Led number in strip")] = 0
+  interval: Annotated[int, Path(title="Number of leds")] = 0
+  red: Annotated[int, Path(title="Red quantity 0 to 255, -1 for light off")] = 0
+  green: Annotated[int, Path(title="Green quantity 0 to 255")] = 0
+  blue: Annotated[int, Path(title="Blue quantity 0 to 255")] = 0
+  borrowed: Union[bool, None] = False
+
 
 def newRequest(app_id, node_id, row, column, interval, led_column, node_type, client, action, date_time, tag_id = None, color = None) :
   mydb = getMyDB()

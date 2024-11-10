@@ -170,6 +170,32 @@ def create_request_for_tag_location(current_device: Annotated[str, Depends(get_a
     blocks = tools.buildBlockPosition(positions, action)
     return blocks
 
+def manage_position(device, item_id, position, action, color):
+    now = tools.getNow()
+    dateTime = now.strftime("%Y-%m-%d %H:%M:%S")
+    Location.newRequest(device['id'], item_id, position['row'], position['start'], position['interval'], position['start'], 'book', 'server', \
+        action, dateTime, None, color)
+    position.update({'nodes':[item_id], 'index':position['start'], 'date_add': dateTime, 'action': action, 'client': 'server', 'color': color})
+    return position
+
+@router.put("/position/{item_id}")
+def ask_position(current_device: Annotated[str, Depends(get_auth_device)], pos: Location.Position, item_id: str) -> Location.Location:
+    """Turn on leds for position in the lighting system. Used for tiers API (could be retrieved with server send event)"""
+    device = current_device.get('device')
+    position = pos.dict()
+    action = "add"
+    color = "{},{},{}".format(position['red'], position['green'], position['blue'])
+    return manage_position(device, item_id, position, action, color)
+
+@router.delete("/position/{item_id}")
+def del_position(current_device: Annotated[str, Depends(get_auth_device)], pos: Location.Position, item_id: str) -> Location.Location:
+    """Turn off leds for position in the lighting system. Used for tiers API (could be retrieved with server send event)"""
+    device = current_device.get('device')
+    position = pos.dict()
+    action = "remove"
+    color = "-1"
+    return manage_position(device, item_id, position, action, color)
+
 @router.put("/reset")
 def update_requests_for_reset(current_device: Annotated[str, Depends(get_auth_device)]):
     """Force reset all location requests for current device : event stream will delete all remaining requests"""
