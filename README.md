@@ -38,3 +38,9 @@ with your own .env :
 ```
 docker run  --env-file .env --rm -it --user $(id -u):$(id -g) -p 80:8000 -w /app -v `pwd`:/app bibliobus-api 
 ```
+
+## Sequence diagram for device authentication
+
+Example of a connection sequence on "Bibus" device using Bibliobus Mobile App, followed by the authors list retrieval and a request for books positions for a given author in order to display corresponding leds into bookshelf.
+
+![Display books with Bibliobus API](docs/sequences_api_devices.png)
