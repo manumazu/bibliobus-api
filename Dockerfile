@@ -1,4 +1,4 @@
-FROM python:slim
+FROM python:3.13-slim
 
 ARG uid=1001
 
@@ -8,7 +8,7 @@ RUN python -m pip install --upgrade pip
 RUN pip install fastapi uvicorn
 RUN pip install pydantic-settings
 RUN pip install mysql-connector-python
-RUN pip install PyJWT
+RUN pip install 'pyjwt<2.10'
 RUN pip install requests
 
 RUN useradd bibliobus --home /app --uid ${uid} 
