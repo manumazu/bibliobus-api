@@ -29,5 +29,7 @@ class Settings(BaseSettings):
     secret_key: str = os.getenv('SECRET_KEY')
     secret_key_access_token: str = os.getenv('SECRET_KEY_ACCESS_TOKEN')
     google_book_api_key: str = os.getenv('GOOGLE_BOOK_API_KEY')
+    app_upload_folder: str = os.getenv('APP_UPLOAD_FOLDER')
+    app_root_path: str = os.getenv('APP_ROOT_PATH')
 
 settings = Settings()
