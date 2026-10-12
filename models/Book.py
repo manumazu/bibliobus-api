@@ -222,14 +222,13 @@ def searchBook(app_id, keyword) :
 def searchBookApi(query, api, ref = None):
   import requests
   if api == 'googleapis':
-    url = "https://www.googleapis.com/books/v1/volumes?key="+settings.google_book_api_key+"&q="
+    url = f"https://www.googleapis.com/books/v1/volumes?key={settings.google_book_api_key}&q={query}"
   if api == 'openlibrary':
-    url = "https://openlibrary.org/api/books?format=json&jscmd=data&bibkeys="
+    url = f"https://openlibrary.org/search.json?q={query}"
   if ref is not None:
-    url = "https://www.googleapis.com/books/v1/volumes/"
-    query = ref
+    url = f"https://www.googleapis.com/books/v1/volumes/{ref}?key={settings.google_book_api_key}"
   data = {}
-  r = requests.get(url + query)
+  r = requests.get(url, headers={'User-Agent': 'Bibliobus (contact@bibliob.us)'})
   data = r.json()
   return data
 
