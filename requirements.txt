@@ -43,7 +43,7 @@ paddleocr==3.7.0
 paddlepaddle==3.3.1
 paddlex==3.7.2
 pandas==3.0.6
-pillow==12.3.0
+pillow==13.0.0
 prettytable==3.18.0
 propcache==0.5.4
 protobuf==7.36.2
